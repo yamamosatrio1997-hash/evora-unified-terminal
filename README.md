@@ -1,4 +1,4 @@
-# Evora Unified Terminal · Yama Futures Lab
+# Pixel Quant
 
 Terminal paper trading bot dengan dashboard live: ekuitas, KPI, posisi, jurnal, heatmap strategi, pelajaran dari kekalahan, kalibrasi, walk-forward, dan lab prediktif (Monte Carlo, GARCH, P(arah) vs P(win)).
 

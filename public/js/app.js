@@ -20,7 +20,7 @@ let current = null;
 let routeToken = 0;
 
 // ---------- preferences ----------
-const PREF_KEY = 'yfl-prefs';
+const PREF_KEY = 'pq-prefs';
 const prefs = (() => { try { return JSON.parse(localStorage.getItem(PREF_KEY)) || {}; } catch { return {}; } })();
 function applyPrefs() {
   document.documentElement.classList.toggle('hide-money', !!prefs.hide);
@@ -53,7 +53,7 @@ async function route() {
   viewEl.innerHTML = '';
   current = mod.mount(viewEl);
   hydrateIcons(viewEl);
-  document.title = `${r.label} · Yama Futures Lab`;
+  document.title = `${r.label} · Pixel Quant`;
   window.scrollTo({ top: 0 });
   if (store.snap) current.update?.(store.snap, true);
 }

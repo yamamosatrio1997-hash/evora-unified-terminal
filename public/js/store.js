@@ -17,7 +17,7 @@ function publish(snap) {
 }
 
 export function connect({ onStatus } = {}) {
-  const local = globalThis.__YFL_BACKEND__;
+  const local = globalThis.__PQ_BACKEND__;
   if (local) {
     store.connected = true;
     onStatus?.(true);

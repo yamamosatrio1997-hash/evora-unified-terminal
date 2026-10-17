@@ -1,7 +1,7 @@
 {
   "name": "evora-unified-terminal",
   "version": "1.0.0",
-  "description": "Yama Futures Lab \u2014 paper trading bot terminal with live dashboard",
+  "description": "Pixel Quant \u2014 paper trading bot terminal with live dashboard",
   "type": "module",
   "private": true,
   "engines": {

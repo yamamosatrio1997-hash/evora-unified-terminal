@@ -1,4 +1,4 @@
-// Static configuration and research content for Yama Futures Lab.
+// Static configuration and research content for Pixel Quant.
 
 export const START_EQUITY = 10_000;
 export const MONTHLY_TARGET = 1_000;

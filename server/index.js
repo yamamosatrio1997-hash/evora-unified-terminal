@@ -121,4 +121,4 @@ function shutdown() {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-server.listen(PORT, () => console.log(`Yama Futures Lab → http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Quant → http://localhost:${PORT}`));

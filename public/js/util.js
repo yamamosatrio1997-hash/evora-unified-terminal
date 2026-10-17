@@ -119,7 +119,7 @@ export function hydrateIcons(root = document) {
 
 // The static build installs an in-browser backend here (see static/boot.js).
 export async function api(path, opts) {
-  const local = globalThis.__YFL_BACKEND__;
+  const local = globalThis.__PQ_BACKEND__;
   if (local) return local.api(path, opts);
   const res = await fetch(path, opts);
   if (!res.ok) throw new Error(`${res.status} ${path}`);
