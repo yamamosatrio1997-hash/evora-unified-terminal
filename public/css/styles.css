@@ -187,7 +187,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .hero-status { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; font-weight: 700; color: var(--green); }
 .hero-status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); animation: ping 1.8s infinite; }
 .hero-meta { margin-top: 6px; color: #cfe9da; font-weight: 500; }
-.hero-chip { position: absolute; z-index: 2; right: 16px; bottom: 14px; font: 9px var(--pixel); color: #bff5d4; background: rgba(3, 10, 6, .6); border: 1px solid var(--line-2); padding: 6px 9px; border-radius: 7px; }
 
 /* equity card */
 .equity-card .label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-weight: 600; }
