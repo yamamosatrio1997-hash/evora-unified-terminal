@@ -301,7 +301,9 @@ export function mount(root) {
     if (!live.quotes[livePair]) renderLiveHead();
     const a = s.account;
     ref.heroStatus.textContent = s.running ? 'System Online' : 'Engine dijeda';
-    ref.heroChip.textContent = s.source === 'tradingview' ? 'PAPER · CANDLE TRADINGVIEW' : 'PAPER MODE · SIMULASI';
+    ref.heroChip.textContent = s.source === 'freqtrade' ? `FREQTRADE · ${s.dryRun ? 'DRY-RUN' : 'LIVE'}`
+      : s.source === 'tradingview' ? 'PAPER · CANDLE TRADINGVIEW' : 'PAPER MODE · SIMULASI';
+    ref.heroMeta.textContent = s.sourceError ? `Freqtrade tidak terjangkau: ${s.sourceError}` : 'Scanning 24/7 • 8 pair • Futures 10x';
     tweenNumber(ref.equity, a.equity, fmtUsd, { money: true });
     ref.change.className = `equity-change ${a.todayPnl >= 0 ? 'up' : 'down'}`;
     ref.change.textContent = `${fmtSignedUsd(a.todayPnl)} (${fmtSignedPct(a.todayPct)}) 24 jam`;

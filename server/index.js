@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Engine } from './engine.js';
+import { FreqtradeClient } from './freqtrade.js';
 import { RULE_EVOLUTION, NOTES, INSIGHTS, MODELS, GLOSSARY, LIMITATIONS, RULE, BOTS } from './data.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,8 +29,25 @@ function saveState(engine) {
   fs.renameSync(tmp, STATE_FILE);
 }
 
-const engine = new Engine({ saved: process.env.FRESH ? null : loadState() });
+// With FREQTRADE_URL the dashboard mirrors a running freqtrade bot instead of its own simulation.
+const freqtrade = process.env.FREQTRADE_URL
+  ? new FreqtradeClient({ url: process.env.FREQTRADE_URL, username: process.env.FREQTRADE_USERNAME || 'pixelquant', password: process.env.FREQTRADE_PASSWORD || '' })
+  : null;
+const engine = freqtrade ? new Engine({ external: true }) : new Engine({ saved: process.env.FRESH ? null : loadState() });
 const clients = new Set();
+
+async function syncFreqtrade() {
+  try {
+    engine.syncExternal(await freqtrade.snapshot(Date.now()), Date.now());
+  } catch (e) {
+    if (engine.sourceError !== e.message) console.error('freqtrade:', e.message);
+    engine.sourceError = e.message;
+  }
+}
+if (freqtrade) {
+  syncFreqtrade();
+  setInterval(syncFreqtrade, Number(process.env.FREQTRADE_POLL_MS) || 15_000);
+}
 
 setInterval(() => {
   engine.tick(Date.now());
@@ -38,7 +56,7 @@ setInterval(() => {
   for (const res of clients) res.write(payload);
 }, 1000);
 
-setInterval(() => { try { saveState(engine); } catch (e) { console.error('save failed', e.message); } }, 30_000);
+if (!freqtrade) setInterval(() => { try { saveState(engine); } catch (e) { console.error('save failed', e.message); } }, 30_000);
 
 function json(res, code, body) {
   res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -100,7 +118,11 @@ const server = http.createServer(async (req, res) => {
   if (key === 'POST /api/engine') {
     if (CONTROL_TOKEN && req.headers['x-control-token'] !== CONTROL_TOKEN) return json(res, 401, { error: 'token salah' });
     const body = await readBody(req);
-    engine.setRunning(body.running !== false);
+    const on = body.running !== false;
+    if (freqtrade) {
+      try { await freqtrade.setRunning(on); await syncFreqtrade(); } catch (e) { return json(res, 502, { error: e.message }); }
+    }
+    engine.setRunning(on);
     return json(res, 200, { running: engine.running });
   }
 
@@ -115,6 +137,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 function shutdown() {
+  if (freqtrade) process.exit(0);
   try { saveState(engine); } catch (e) { console.error('save failed', e.message); }
   process.exit(0);
 }

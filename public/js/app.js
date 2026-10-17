@@ -92,7 +92,7 @@ function renderPairs(snap) {
   const list = $('#pairs');
   // prefer real TradingView quotes when the connector answers
   const prices = snap.prices.map((p) => (live.quotes[p.sym] ? { ...p, price: live.quotes[p.sym].price, chg24: live.quotes[p.sym].chg } : p));
-  $('#pairsSource').textContent = Object.keys(live.quotes).length ? 'TradingView' : 'simulasi';
+  $('#pairsSource').textContent = Object.keys(live.quotes).length ? 'TradingView' : snap.source === 'freqtrade' ? 'freqtrade' : 'simulasi';
   const rows = [...prices].sort((a, b) => Math.abs(b.chg24) - Math.abs(a.chg24)).slice(0, 6);
   if (pairRows.size !== rows.length || rows.some((p) => !pairRows.has(p.sym))) {
     pairRows.clear();

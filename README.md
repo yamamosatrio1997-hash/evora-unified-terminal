@@ -20,6 +20,16 @@ Variabel lingkungan opsional:
 | `CONTROL_TOKEN` | bila diisi, `POST /api/engine` wajib header `x-control-token` |
 | `FRESH=1` | abaikan state tersimpan dan seed ulang |
 
+## Freqtrade
+
+Folder `freqtrade/` berisi keempat bot sebagai strategi freqtrade, plus versi FreqAI (LightGBM) yang menyaring sinyal bot dengan P(win) hasil belajar. Jalankan freqtrade lalu sambungkan dashboard:
+
+```bash
+FREQTRADE_URL=http://127.0.0.1:8080 FREQTRADE_USERNAME=pixelquant FREQTRADE_PASSWORD=... npm start
+```
+
+Detail instalasi, backtest, dan dry-run ada di [`freqtrade/README.md`](freqtrade/README.md).
+
 ## Arsitektur
 
 - `server/engine.js`: simulasi pasar (random walk dengan rezim drift), 4 bot forward test, eksekusi TP1 → breakeven → TP2 / SL / time stop, biaya 0,15% pulang-pergi, statistik (KPI, vonis 4 target, pelajaran, kalibrasi, walk-forward, Monte Carlo, GARCH).

@@ -82,7 +82,9 @@ export class Engine {
   // bars: { 'BTC/USDT': [{t,o,h,l,c,v}, ...] } with t = bar open time in ms, oldest first, last bar still forming.
   // With bars the engine backtests the bots on real candles and forward-tests on live quotes;
   // without them it seeds a synthetic history and runs a simulated price walk.
-  constructor({ seed = 1997, now = Date.now(), saved = null, bars = null } = {}) {
+  // external: trades, positions and prices come from another bot (see syncExternal); the engine
+  // only derives the dashboard's statistics from them.
+  constructor({ seed = 1997, now = Date.now(), saved = null, bars = null, external = false } = {}) {
     this.seed = seed;
     this.rng = mulberry32((seed * 7919 + Math.floor(now / 1000)) >>> 0);
     this.running = true;
@@ -102,12 +104,61 @@ export class Engine {
     this.real = false;
     this.source = 'simulasi';
     this.timeStop = TIME_STOP;
-    if (bars) this.#initReal(bars, now);
+    this.external = external;
+    if (external) this.#initExternal(now);
+    else if (bars) this.#initReal(bars, now);
     else if (saved && saved.v === 1) this.#restore(saved, now);
     else this.#seedHistory(mulberry32(seed), now);
   }
 
   // ----- seeding -----
+
+  // ----- external bot (freqtrade) -----
+
+  #initExternal(now) {
+    this.source = 'freqtrade';
+    this.balance = START_EQUITY;
+    this.extEquity = START_EQUITY;
+    this.extPositions = [];
+    this.extPrices = [];
+    this.timeStop = BAR_TIME_STOP;
+    this.equityHour = [{ t: Math.floor(now / HOUR) * HOUR - HOUR, v: START_EQUITY }, { t: Math.floor(now / HOUR) * HOUR, v: START_EQUITY }];
+    this.equityMin = this.equityHour.map((q) => ({ ...q }));
+  }
+
+  syncExternal(data, now = Date.now()) {
+    const start = data.startCapital || START_EQUITY;
+    const seen = new Set(this.trades.map((t) => t.id));
+    this.trades = data.trades.slice(-MAX_TRADES);
+    this.extPositions = data.positions;
+    this.extPrices = data.prices;
+    const open = data.positions.reduce((sum, p) => sum + p.upnl, 0);
+    this.extEquity = data.equity ?? start + this.trades.reduce((sum, t) => sum + t.pnl, 0) + open;
+    // freqtrade's wallet also carries funding fees and partial exits, so "balance" is equity minus open PnL
+    this.balance = this.extEquity - open;
+    this.running = data.running;
+    this.dryRun = data.dryRun;
+    this.sourceError = null;
+    // equity curve walked back from the real wallet: v(t) = balance now - pnl of trades closed after t,
+    // so fees/funding that freqtrade books outside trade pnl never make the curve jump at the end
+    const series = [];
+    let idx = 0, after = this.trades.reduce((sum, t) => sum + t.pnl, 0);
+    const first = this.trades.length ? Math.min(this.trades[0].openedAt, this.trades[0].closedAt) : now - DAY;
+    for (let t = Math.floor(first / HOUR) * HOUR; t <= now; t += HOUR) {
+      while (idx < this.trades.length && this.trades[idx].closedAt <= t) after -= this.trades[idx++].pnl;
+      series.push({ t, v: round(this.balance - after) });
+    }
+    series[series.length - 1].v = round(this.extEquity);
+    this.equityHour = series;
+    if (!this.started) this.equityMin = series.filter((q) => q.t >= now - DAY).map((q) => ({ ...q }));
+    if (this.started) {
+      for (const t of this.trades) if (!seen.has(t.id)) this.#logClose(t, t.closedAt);
+    } else {
+      for (const t of this.trades.slice(-14)) this.#logClose(t, t.closedAt);
+      this.#log('system', now, 'Tersambung ke freqtrade', `${data.strategy || 'strategi'} · ${data.dryRun ? 'dry-run' : 'LIVE'} · ${this.trades.length} trade`, null, 'info');
+      this.started = true;
+    }
+  }
 
   // ----- real candles: backtest then forward test -----
 
@@ -491,6 +542,10 @@ export class Engine {
 
   tick(now = Date.now()) {
     this.now = now;
+    if (this.external) {
+      this.#updateEquitySeries(now);
+      return;
+    }
     if (this.real) {
       // prices only move on live quotes; the second tick handles time stops and the equity series
       if (this.running) this.#managePositions(now);
@@ -643,14 +698,19 @@ export class Engine {
   // ----- derived views -----
 
   unrealized() {
+    if (this.external) return this.extPositions.reduce((s, p) => s + p.upnl, 0);
     let u = 0;
     for (const p of this.positions) u += (this.market[p.pair].price - p.entry) * p.qtyOpen * sideSign(p.side);
     return u;
   }
 
-  equity() { return this.balance + this.unrealized() + this.positions.reduce((s, p) => s + p.realized, 0); }
+  equity() {
+    if (this.external) return this.extEquity;
+    return this.balance + this.unrealized() + this.positions.reduce((s, p) => s + p.realized, 0);
+  }
 
   usedMargin() {
+    if (this.external) return this.extPositions.reduce((s, p) => s + p.margin, 0);
     return this.positions.reduce((s, p) => s + (p.qtyOpen * this.market[p.pair].price) / LEVERAGE, 0);
   }
 
@@ -693,8 +753,9 @@ export class Engine {
     return BOTS.map((b) => {
       const ts = this.trades.filter((t) => t.bot === b.id && t.closedAt >= from);
       const st = tradeStats(ts);
-      const open = this.positions.filter((p) => p.bot === b.id);
-      const unreal = open.reduce((s, p) => s + p.realized + (this.market[p.pair].price - p.entry) * p.qtyOpen * sideSign(p.side), 0);
+      const open = this.external ? this.extPositions.filter((p) => p.bot === b.id) : this.positions.filter((p) => p.bot === b.id);
+      const unreal = this.external ? open.reduce((s, p) => s + p.upnl, 0)
+        : open.reduce((s, p) => s + p.realized + (this.market[p.pair].price - p.entry) * p.qtyOpen * sideSign(p.side), 0);
       const monthPnl = st.pnl + unreal;
       return {
         id: b.id, name: b.name, pairs: b.pairs, color: b.color, tf: b.tf, style: b.style, rr: b.rr,
@@ -705,6 +766,7 @@ export class Engine {
   }
 
   pricesView() {
+    if (this.external) return this.extPrices;
     return Object.values(this.market).map((m) => {
       const h = m.hist;
       const p24 = h[Math.max(0, h.length - 25)];
@@ -717,6 +779,7 @@ export class Engine {
   }
 
   positionsView() {
+    if (this.external) return this.extPositions.map((p) => ({ ...p, timeLeft: Math.max(0, p.openedAt + this.timeStop - this.now) }));
     return this.positions.map((p) => {
       const px = this.market[p.pair].price;
       const upnl = p.realized + (px - p.entry) * p.qtyOpen * sideSign(p.side);
@@ -730,6 +793,7 @@ export class Engine {
   }
 
   pendingView() {
+    if (this.external) return [];
     return this.pending.map((o) => ({
       id: o.id, botName: o.botName, pair: o.pair, side: o.side, limit: o.limit, price: this.market[o.pair].price,
       createdAt: o.createdAt, expiresAt: o.expiresAt, conf: o.conf, distance: (this.market[o.pair].price - o.limit) / o.limit,
@@ -757,6 +821,7 @@ export class Engine {
     const bots = this.botsView();
     return {
       t: this.now, running: this.running, uptime: this.now - this.bootAt, source: this.source,
+      dryRun: this.dryRun ?? true, sourceError: this.sourceError ?? null,
       account: this.account(), kpi: this.kpis(), prices: this.pricesView(),
       positions: this.positionsView(), pending: this.pendingView(), bots,
       allocation: this.allocation(), logs: this.logs.slice(-30),
@@ -810,7 +875,7 @@ export class Engine {
 
   lessonsView() {
     const conds = [
-      ['Melawan bias trend', (t) => !t.tags.aligned],
+      ['Melawan bias trend', (t) => t.tags.aligned === false],
       ['Volatilitas tinggi', (t) => t.tags.volRegime === 'tinggi'],
       ['Volatilitas rendah', (t) => t.tags.volRegime === 'rendah'],
       ['Sesi Asia', (t) => t.tags.session === 'Asia'],
