@@ -207,82 +207,38 @@ function drawUfo(ctx, x, y, t) {
   }
 }
 
-// Draws a 1px-wide line with integer steps so it stays crisp when the canvas is scaled up.
-function pixLine(ctx, x0, y0, x1, y1) {
-  const steps = Math.max(1, Math.abs(x1 - x0), Math.abs(y1 - y0));
-  for (let k = 0; k <= steps; k++) ctx.fillRect(Math.round(x0 + ((x1 - x0) * k) / steps), Math.round(y0 + ((y1 - y0) * k) / steps), 1, 1);
-}
-
-// Tron-style night flight: a neon city scrolls past on a perspective light grid while
-// the saucer overtakes it, leaving a light trail; the little alien still walks the grid.
 export function heroScene(canvas) {
   const W = canvas.width, H = canvas.height;
-  const HZ = Math.round(H * 0.6); // horizon
   const rnd = seeded(77);
-  const stars = Array.from({ length: 55 }, () => ({ x: Math.floor(rnd() * W), y: Math.floor(rnd() * HZ * 0.8), p: rnd() * 6.28, s: 0.6 + rnd() * 2 }));
-  // two looping skyline strips, each wider than the canvas so the wrap is never visible
-  const strip = (len, minW, maxW, minH, maxH, gap) => {
-    const out = [];
-    for (let x = 0; x < len;) {
-      const w = minW + Math.floor(rnd() * (maxW - minW));
-      if (x + w > len) break;
-      out.push({ x, w, h: minH + Math.floor(rnd() * (maxH - minH)), seed: Math.floor(rnd() * 1e6), edge: rnd() < 0.3 ? NEON.magenta : rnd() < 0.5 ? NEON.cyan : NEON.green });
-      x += w + gap + Math.floor(rnd() * 3);
-    }
-    return out;
-  };
-  const FAR_LEN = W * 2, NEAR_LEN = W * 2;
-  const far = strip(FAR_LEN, 8, 20, 10, 30, 1);
-  const near = strip(NEAR_LEN, 12, 26, 16, 44, 5);
-  const FLIGHT = 11; // seconds for one pass of the saucer
-
-  const ufoAt = (t) => {
-    const p = (((t + FLIGHT * 0.6) % FLIGHT) + FLIGHT) % FLIGHT / FLIGHT;
-    return { x: -50 + p * (W + 90), y: 16 + Math.sin(p * Math.PI * 3) * 8 + Math.sin(t * 2.1) * 2, p };
-  };
-
-  function drawLayer(ctx, layer, len, off, base, far) {
-    for (const b of layer) {
-      let x = Math.round(((b.x - off) % len + len) % len);
-      if (x > W) x -= len;
-      if (x + b.w < 0 || x > W) continue;
-      const top = base - b.h;
-      ctx.fillStyle = far ? '#03140b' : '#010805';
-      ctx.fillRect(x, top, b.w, b.h);
-      // light edges: roof and both sides, dimmer on the far layer
-      ctx.fillStyle = far ? 'rgba(34,240,255,.28)' : b.edge;
-      ctx.fillRect(x, top, b.w, 1);
-      if (!far) {
-        ctx.globalAlpha = 0.55;
-        ctx.fillRect(x, top, 1, b.h); ctx.fillRect(x + b.w - 1, top, 1, b.h);
-        ctx.globalAlpha = 0.18;
-        ctx.fillRect(x - 1, top - 1, b.w + 2, 1);
-        ctx.globalAlpha = 1;
-      }
-      // window strips
-      for (let y = top + 3; y < base - 2; y += far ? 4 : 3) {
-        const hsh = (y * 19349663) ^ b.seed;
-        if ((hsh & 3) === 0) continue;
-        ctx.fillStyle = far ? 'rgba(57,255,136,.16)' : (hsh & 12) === 12 ? 'rgba(255,43,214,.7)' : (hsh & 4) ? 'rgba(57,255,136,.75)' : 'rgba(34,240,255,.7)';
-        const wx = x + 2 + ((hsh >> 3) & 1), ww = b.w - 4 - ((hsh >> 5) & 3);
-        if (ww > 0) ctx.fillRect(wx, y, far ? 1 : ww, 1);
-        if (far) for (let k = wx + 3; k < x + b.w - 2; k += 3) ctx.fillRect(k, y, 1, 1);
-      }
-      // antenna beacon on tall towers
-      if (!far && b.h > 36) {
-        ctx.fillStyle = 'rgba(255,43,214,.5)'; ctx.fillRect(x + (b.w >> 1), top - 4, 1, 4);
-        if (Math.sin(performance.now() / 300 + b.seed) > 0) { ctx.fillStyle = NEON.magenta; ctx.fillRect(x + (b.w >> 1), top - 5, 1, 1); }
-      }
-    }
+  const stars = Array.from({ length: 55 }, () => ({ x: Math.floor(rnd() * W), y: Math.floor(rnd() * H * 0.5), p: rnd() * 6.28, s: 0.6 + rnd() * 2 }));
+  const rain = Array.from({ length: 70 }, () => ({ x: rnd() * W, y: rnd() * H, v: 2 + rnd() * 2 }));
+  const far = [], near = [];
+  for (let x = 0; x < W;) { const w = 8 + Math.floor(rnd() * 16); far.push({ x, w, h: 24 + Math.floor(rnd() * 40) }); x += w + 1; }
+  for (let x = -4; x < W;) {
+    const w = 10 + Math.floor(rnd() * 18);
+    near.push({ x, w, h: 14 + Math.floor(rnd() * 44), seed: Math.floor(rnd() * 1e6), sign: rnd() < 0.35 ? (rnd() < 0.5 ? NEON.magenta : NEON.cyan) : null });
+    x += w + 2;
   }
+  const tallest = near.reduce((a, b) => (b.h > a.h ? b : a));
+  const chart = [];
+  let v = 0;
+  for (let i = 0; i < 70; i++) { v += (rnd() - 0.38) * 3.2; chart.push(v); }
+  const cMin = Math.min(...chart), cMax = Math.max(...chart);
+  // the saucer crosses the city left to right, dipping over the rooftops, then loops round
+  const FLIGHT = 11;
+  const ufoAt = (t) => {
+    const p = ((t + FLIGHT * 0.6) % FLIGHT) / FLIGHT;
+    return { x: -50 + p * (W + 90), y: 10 + Math.sin(p * Math.PI * 3) * 7 + Math.sin(t * 2.1) * 2, p };
+  };
 
   runScene(canvas, (ctx, t) => {
-    bandedSky(ctx, W, 0, HZ, ['#010503', '#02100a', '#041d10', '#08301a', '#0d4524']);
+    bandedSky(ctx, W, 0, H, ['#010503', '#03130a', '#062512', '#0b3d1f', '#12552d']);
+    // stars
     for (const s of stars) {
       const a = 0.5 + 0.5 * Math.sin(t * s.s + s.p);
       if (a < 0.4) continue;
       ctx.fillStyle = a > 0.85 ? '#eafff2' : '#5fae80';
-      ctx.fillRect((s.x - Math.floor(t * 2) + W * 8) % W, s.y, 1, 1);
+      ctx.fillRect(s.x, s.y, 1, 1);
     }
     // holographic moon with scan gaps
     const mx = W - 46, my = 17;
@@ -294,38 +250,56 @@ export function heroScene(canvas) {
       ctx.fillStyle = y < 0 ? '#c8ffdc' : '#8bf5b4';
       ctx.fillRect(mx - hw, my + y, hw * 2, 1);
     }
-    // grid floor
-    ctx.fillStyle = '#010604';
-    ctx.fillRect(0, HZ, W, H - HZ);
-    ctx.fillStyle = 'rgba(34,240,255,.5)';
-    ctx.fillRect(0, HZ, W, 1);
-    ctx.fillStyle = 'rgba(34,240,255,.12)';
-    ctx.fillRect(0, HZ - 1, W, 1); ctx.fillRect(0, HZ + 1, W, 1);
-    const vx = W / 2, run = (t * 1.6) % 1;
-    for (let i = 1; i < 14; i++) {
-      const z = i - run;
-      const y = Math.round(HZ + 30 / z);
-      if (y >= H || y <= HZ) continue;
-      ctx.fillStyle = `rgba(57,255,136,${Math.min(0.75, 0.08 + (y - HZ) / (H - HZ) * 0.7)})`;
-      ctx.fillRect(0, y, W, 1);
+    // far skyline
+    for (const b of far) {
+      ctx.fillStyle = '#04160c';
+      ctx.fillRect(b.x, H - b.h, b.w, b.h);
+      ctx.fillStyle = 'rgba(57,255,136,.18)';
+      for (let y = H - b.h + 3; y < H - 4; y += 4) for (let x = b.x + 2; x < b.x + b.w - 1; x += 3) if (((x * 7 + y * 13) % 5) === 0) ctx.fillRect(x, y, 1, 1);
     }
-    ctx.fillStyle = 'rgba(57,255,136,.4)';
-    for (let j = -14; j <= 14; j++) pixLine(ctx, vx + j * 4, HZ + 1, vx + j * 40, H);
-    // two light cycles racing along the grid
-    for (const [lane, sp, col] of [[HZ + 9, 70, NEON.cyan], [HZ + 25, -95, NEON.magenta]]) {
-      const hx = ((t * sp) % (W + 80) + W + 80) % (W + 80) - 40;
-      const dir = Math.sign(sp);
-      ctx.fillStyle = col; ctx.fillRect(Math.round(hx), lane, 3, 1);
-      for (let k = 1; k < 26; k++) {
-        ctx.globalAlpha = 0.6 * (1 - k / 26);
-        ctx.fillRect(Math.round(hx - dir * k * 2), lane, 2, 1);
+    // performance line rising behind the near buildings
+    const prog = Math.min(1, (t % 9) / 6);
+    const n = Math.max(2, Math.floor(chart.length * prog));
+    const cx0 = W * 0.42, cx1 = W - 8, cy0 = H - 24, cy1 = 30;
+    let px = null, py = null;
+    for (let i = 0; i < n; i++) {
+      const x = Math.round(cx0 + (i / (chart.length - 1)) * (cx1 - cx0));
+      const y = Math.round(cy0 - ((chart[i] - cMin) / (cMax - cMin)) * (cy0 - cy1));
+      if (px != null) {
+        const steps = Math.max(Math.abs(x - px), Math.abs(y - py));
+        for (let k = 0; k <= steps; k++) {
+          const xx = Math.round(px + ((x - px) * k) / steps), yy = Math.round(py + ((y - py) * k) / steps);
+          ctx.fillStyle = 'rgba(57,255,136,.25)'; ctx.fillRect(xx - 1, yy - 1, 3, 3);
+          ctx.fillStyle = NEON.green; ctx.fillRect(xx, yy, 1, 2);
+        }
       }
-      ctx.globalAlpha = 1;
+      px = x; py = y;
     }
-    // parallax skyline: far strip slow, near strip faster
-    drawLayer(ctx, far, FAR_LEN, t * 6, HZ, true);
-    drawLayer(ctx, near, NEAR_LEN, t * 16, HZ + 6, false);
-    // the alien strolling along the front of the grid
+    if (px != null && Math.floor(t * 4) % 2) { ctx.fillStyle = '#d4ffe4'; ctx.fillRect(px - 1, py - 1, 3, 3); }
+    // near skyline: neon windows and flickering signs
+    for (const b of near) {
+      ctx.fillStyle = '#020b06';
+      ctx.fillRect(b.x, H - b.h, b.w, b.h);
+      ctx.fillStyle = '#0c2a18';
+      ctx.fillRect(b.x, H - b.h, b.w, 1);
+      for (let y = H - b.h + 3; y < H - 2; y += 3) {
+        for (let x = b.x + 2; x < b.x + b.w - 1; x += 3) {
+          const hsh = (x * 73856093) ^ (y * 19349663) ^ b.seed;
+          if ((hsh & 7) > 2) continue;
+          const off = ((hsh >> 4) & 63) === 0 && Math.sin(t * 3 + hsh) > 0.3;
+          ctx.fillStyle = off ? '#020b06' : (hsh & 48) === 48 ? NEON.magenta : (hsh & 16) ? NEON.green : NEON.cyan;
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+      if (b.sign && Math.sin(t * 5 + b.seed) > -0.7) {
+        ctx.fillStyle = b.sign;
+        ctx.fillRect(b.x + 1, H - b.h + 4, 2, 7);
+        ctx.fillStyle = b.sign === NEON.magenta ? 'rgba(255,43,214,.25)' : 'rgba(34,240,255,.25)';
+        ctx.fillRect(b.x, H - b.h + 3, 4, 9);
+      }
+    }
+    if (Math.floor(t * 1.5) % 2) { ctx.fillStyle = NEON.magenta; ctx.fillRect(tallest.x + Math.floor(tallest.w / 2), H - tallest.h - 3, 1, 3); }
+    // a tiny alien strolling up and down the street
     const span = W - 30;
     const pos = (t * 9) % (span * 2);
     const wx = Math.round(10 + (pos < span ? pos : span * 2 - pos));
@@ -333,11 +307,17 @@ export function heroScene(canvas) {
     ctx.fillStyle = 'rgba(57,255,136,.14)';
     ctx.fillRect(wx - 2, H - 15, 11, 15);
     drawSprite(ctx, hop ? SPR.walkerA : SPR.walkerB, wx, H - 12 - (hop ? 1 : 0), { g: '#1f6e2c' });
-    // UFO overtaking the city, with a fading light trail behind it
+    // rain
+    ctx.fillStyle = 'rgba(120,255,180,.22)';
+    for (const r of rain) {
+      const y = (r.y + t * r.v * 20) % H, x = (r.x - t * r.v * 4 + W) % W;
+      ctx.fillRect(Math.round(x), Math.round(y), 1, 2);
+    }
+    // UFO with the alien pilot, leaving a fading light trail
     const u = ufoAt(t);
     for (let k = 14; k >= 1; k--) {
       const q = ufoAt(t - k * 0.06);
-      if (q.p > u.p) continue; // don't draw a trail across the wrap
+      if (q.p > u.p) continue; // no trail across the wrap
       ctx.fillStyle = `rgba(34,240,255,${0.5 * (1 - k / 14)})`;
       ctx.fillRect(Math.round(q.x + 2), Math.round(q.y + 10), 4, 2);
     }
