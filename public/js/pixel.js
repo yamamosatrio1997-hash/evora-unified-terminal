@@ -46,6 +46,35 @@ const SPR = {
     '....kgggk....',
     '.....kkk.....',
   ],
+  // tiny full-body alien for the street, two walking frames
+  walkerA: [
+    '..kkk..',
+    '.klllk.',
+    'klllllk',
+    'keeleek',
+    'klllllk',
+    '.klllk.',
+    '..kgk..',
+    '.kgggk.',
+    'kgggggk',
+    '.kgggk.',
+    '.k...k.',
+    'kk...kk',
+  ],
+  walkerB: [
+    '..kkk..',
+    '.klllk.',
+    'klllllk',
+    'keeleek',
+    'klllllk',
+    '.klllk.',
+    '..kgk..',
+    '.kgggk.',
+    'kgggggk',
+    '.kgggk.',
+    '..k.k..',
+    '.kk.kk.',
+  ],
   alienBlink: [
     '....kkkkk....',
     '..kkllllgkk..',
@@ -264,6 +293,14 @@ export function heroScene(canvas) {
       }
     }
     if (Math.floor(t * 1.5) % 2) { ctx.fillStyle = NEON.magenta; ctx.fillRect(tallest.x + Math.floor(tallest.w / 2), H - tallest.h - 3, 1, 3); }
+    // a tiny alien strolling up and down the street
+    const span = W - 30;
+    const pos = (t * 9) % (span * 2);
+    const wx = Math.round(10 + (pos < span ? pos : span * 2 - pos));
+    const hop = Math.floor(t * 5) % 2;
+    ctx.fillStyle = 'rgba(57,255,136,.14)';
+    ctx.fillRect(wx - 2, H - 15, 11, 15);
+    drawSprite(ctx, hop ? SPR.walkerA : SPR.walkerB, wx, H - 12 - (hop ? 1 : 0), { g: '#1f6e2c' });
     // rain
     ctx.fillStyle = 'rgba(120,255,180,.22)';
     for (const r of rain) {

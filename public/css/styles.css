@@ -559,3 +559,13 @@ h1 { text-shadow: 0 0 22px rgba(57, 255, 136, 0.35); }
   50% { text-shadow: -2px 0 var(--magenta), 2px 0 var(--cyan); transform: translateX(-1px); }
   100% { text-shadow: 0 0 12px rgba(57, 255, 136, 0.45); transform: none; }
 }
+
+/* flying saucer over the homepage */
+.ufo {
+  position: fixed; left: 0; top: 0; width: 132px; height: 120px; z-index: 45; pointer-events: none;
+  will-change: transform; filter: drop-shadow(0 0 12px rgba(255, 214, 59, 0.25)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+@media (max-width: 900px) { .ufo { width: 88px; height: 80px; } }
+.sound-btn.on { color: var(--accent); box-shadow: 0 0 14px -4px var(--accent); border-color: rgba(57, 255, 136, 0.4); }
+.sound-btn.on .ico { animation: pulseIco 1.4s ease-in-out infinite; }
+@keyframes pulseIco { 50% { opacity: 0.55; } }

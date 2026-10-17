@@ -2,6 +2,8 @@ import { $, h, icon, api, tweenNumber, fmtUsd, fmtSignedUsd, fmtSignedPct, fmtPc
 import { LineChart, Donut, sparkline, CandleChart } from '../charts.js';
 import { live, onLive, watchCandles, errorText, canAskAccess, requestAccess, TV_SYMBOLS } from '../live-market.js';
 import { heroScene, botAvatar } from '../pixel.js';
+import { startUfo } from '../ufo.js';
+import { alienAudio } from '../alien-audio.js';
 
 const MONTH = 30 * 86400000;
 const ALLOC_COLORS = ['#ffd23b', '#b86bff', '#22f0ff', '#22c4ff', '#39ff88', '#52806a'];
@@ -401,5 +403,7 @@ export function mount(root) {
     ref.metrics.innerHTML = m.map(([l, val]) => `<div><span>${l}</span><b>${val}</b></div>`).join('');
   }
 
-  return { update, destroy: () => { clearInterval(lessonTimer); stopCandles?.(); stopLive(); } };
+  const stopUfo = startUfo({ onMove: (x, beam) => alienAudio.ufo(x, beam) });
+
+  return { update, destroy: () => { clearInterval(lessonTimer); stopCandles?.(); stopLive(); stopUfo(); } };
 }

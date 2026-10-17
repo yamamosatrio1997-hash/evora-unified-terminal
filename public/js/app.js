@@ -2,6 +2,7 @@ import { $, h, icon, hydrateIcons, tweenNumber, fmtTime, fmtSignedPct, fmtPx, co
 import { connect, subscribe, store } from './store.js';
 import { brandLogo, mascotScene, sunsetScene } from './pixel.js';
 import { live, onLive, startQuotes } from './live-market.js';
+import { alienAudio } from './alien-audio.js';
 
 const ROUTES = [
   { path: '/', label: 'Laporan Lab', icon: 'home', load: () => import('./views/dashboard.js') },
@@ -28,6 +29,8 @@ function applyPrefs() {
   $('#optHide').checked = !!prefs.hide;
   $('#optMotion').checked = !!prefs.motion;
   $('#optToast').checked = prefs.toast !== false;
+  $('#optMusic').checked = prefs.music !== false;
+  alienAudio.setMusic(prefs.music !== false);
 }
 function savePref(k, v) {
   prefs[k] = v;
@@ -80,6 +83,7 @@ function renderLogs(snap, first) {
     if (!first && (l.kind === 'tp' || l.kind === 'sl' || l.kind === 'buy' || l.kind === 'sell')) {
       unseen++;
       if (prefs.toast !== false && (l.kind === 'tp' || l.kind === 'sl')) toast(l);
+      alienAudio.cue(l.kind === 'tp' || l.kind === 'sl' ? l.kind : 'open');
     }
   }
   const badge = $('#bellBadge');
@@ -176,6 +180,33 @@ function rotateBubble() {
   }, 28);
 }
 
+// ---------- alien sound ----------
+function renderSoundBtn() {
+  const b = $('#soundBtn');
+  const on = alienAudio.on;
+  b.innerHTML = icon(on ? 'sound' : 'mute');
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', String(on));
+  b.setAttribute('aria-label', on ? 'Matikan suara alien' : 'Nyalakan suara alien');
+}
+
+async function setSound(on) {
+  if (on) await alienAudio.start(); else await alienAudio.stop();
+  savePref('sound', on);
+  setTimeout(renderSoundBtn, on ? 0 : 450);
+  renderSoundBtn();
+}
+
+function wireSound() {
+  renderSoundBtn();
+  $('#soundBtn').addEventListener('click', () => setSound(!alienAudio.on));
+  // browsers only allow audio after a gesture: resume a saved "on" at the first click
+  if (prefs.sound) {
+    const resume = () => { if (!alienAudio.on) setSound(true); };
+    document.addEventListener('pointerdown', resume, { once: true, capture: true });
+  }
+}
+
 function wireTopbar() {
   $('#statusPill').addEventListener('click', async () => {
     if (!store.snap) return;
@@ -198,6 +229,7 @@ function wireTopbar() {
   $('#optHide').addEventListener('change', (e) => savePref('hide', e.target.checked));
   $('#optMotion').addEventListener('change', (e) => savePref('motion', e.target.checked));
   $('#optToast').addEventListener('change', (e) => savePref('toast', e.target.checked));
+  $('#optMusic').addEventListener('change', (e) => savePref('music', e.target.checked));
   $('#navToggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
 }
 
@@ -206,6 +238,7 @@ applyPrefs();
 hydrateIcons();
 buildNav();
 wireTopbar();
+wireSound();
 brandLogo($('#brandLogo'));
 mascotScene($('#mascot'));
 sunsetScene($('#sunset'));
