@@ -1,13 +1,16 @@
 {
   "name": "evora-unified-terminal",
   "version": "1.0.0",
-  "description": "Yama Futures Lab — paper trading bot terminal with live dashboard",
+  "description": "Yama Futures Lab \u2014 paper trading bot terminal with live dashboard",
   "type": "module",
   "private": true,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build:static": "node scripts/build-static.mjs"
   }
 }

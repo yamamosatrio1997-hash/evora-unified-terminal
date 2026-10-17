@@ -329,3 +329,144 @@ export function sparkline(canvas, values, color, { fill = true, width = 1.6 } = 
 }
 
 export { hexA };
+
+// Candlestick chart with volume, price levels, live last-price line and OHLC hover.
+export class CandleChart {
+  constructor(host, opts = {}) {
+    this.host = host;
+    this.o = { pad: { l: 12, r: 72, t: 12, b: 26 }, priceFormat: (v) => v.toFixed(2), timeFormat: (t) => String(t), ...opts };
+    this.canvas = h('canvas');
+    this.tip = h('div', { class: 'chart-tip', hidden: true });
+    host.classList.add('chart-host');
+    host.append(this.canvas, this.tip);
+    this.ctx = this.canvas.getContext('2d');
+    this.bars = [];
+    this.levels = [];
+    this.dom = null;
+    this.reveal = 1;
+    this.ro = new ResizeObserver(() => this.#resize());
+    this.ro.observe(host);
+    this.canvas.addEventListener('mousemove', (e) => { const r = this.canvas.getBoundingClientRect(); this.hover = { x: e.clientX - r.left, y: e.clientY - r.top }; });
+    this.canvas.addEventListener('mouseleave', () => { this.hover = null; this.tip.hidden = true; });
+    this.#resize();
+    this._frame = () => this.#loop();
+    requestAnimationFrame(this._frame);
+  }
+
+  #resize() {
+    const r = this.host.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    this.w = Math.max(50, r.width); this.h = Math.max(50, r.height);
+    this.canvas.width = this.w * dpr; this.canvas.height = this.h * dpr;
+    this.canvas.style.width = `${this.w}px`; this.canvas.style.height = `${this.h}px`;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  setBars(bars, { fresh = false } = {}) {
+    this.bars = bars;
+    if (fresh && !prefs.reduceMotion) this.reveal = 0;
+  }
+
+  setLevels(levels) { this.levels = levels; }
+
+  #loop() {
+    if (!this.host.isConnected) { this.ro.disconnect(); return; }
+    if (this.bars.length) {
+      let min = Infinity, max = -Infinity;
+      for (const b of this.bars) { min = Math.min(min, b.l); max = Math.max(max, b.h); }
+      for (const l of this.levels) { min = Math.min(min, l.price); max = Math.max(max, l.price); }
+      const pad = (max - min) * 0.06 || max * 0.001;
+      const t = { min: min - pad, max: max + pad };
+      const k = prefs.reduceMotion || !this.dom ? 1 : 0.15;
+      this.dom = this.dom || { ...t };
+      this.dom.min += (t.min - this.dom.min) * k;
+      this.dom.max += (t.max - this.dom.max) * k;
+      this.reveal = Math.min(1, this.reveal + 0.04);
+      this.#draw();
+    }
+    requestAnimationFrame(this._frame);
+  }
+
+  #draw() {
+    const { ctx, w, h: H, bars } = this;
+    const { pad } = this.o;
+    ctx.clearRect(0, 0, w, H);
+    const n = bars.length, iw = w - pad.l - pad.r, ih = H - pad.t - pad.b;
+    const volH = ih * 0.16;
+    const { min, max } = this.dom;
+    const slot = iw / n;
+    const X = (i) => pad.l + slot * (i + 0.5);
+    const Y = (v) => pad.t + (1 - (v - min) / (max - min || 1)) * ih;
+    const dim = css('--dim') || '#5f6c9c';
+    const up = css('--green') || '#22e39b', down = css('--red') || '#ff5c7a';
+
+    ctx.font = '11px "JetBrains Mono", monospace';
+    ctx.fillStyle = dim; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = css('--grid') || 'rgba(120,140,220,.12)';
+    ctx.setLineDash([2, 4]);
+    const step = niceStep(max - min, 5);
+    for (let v = Math.ceil(min / step) * step; v <= max; v += step) {
+      const y = Math.round(Y(v)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+      ctx.fillText(this.o.priceFormat(v), w - pad.r + 8, y);
+    }
+    ctx.setLineDash([]);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let j = 0; j < 6; j++) {
+      const i = Math.round((j / 5) * (n - 1));
+      ctx.fillText(this.o.timeFormat(bars[i].t), Math.min(w - pad.r - 24, Math.max(pad.l + 24, X(i))), H - pad.b + 8);
+    }
+
+    const shown = Math.max(1, Math.ceil(n * (1 - Math.pow(1 - this.reveal, 3))));
+    const vmax = Math.max(...bars.map((b) => b.v || 0)) || 1;
+    const bw = Math.max(1, slot * 0.62);
+    for (let i = 0; i < shown; i++) {
+      const b = bars[i], x = X(i), col = b.c >= b.o ? up : down;
+      ctx.fillStyle = hexA(col, 0.16);
+      const vh = ((b.v || 0) / vmax) * volH;
+      ctx.fillRect(x - bw / 2, pad.t + ih - vh, bw, vh);
+      ctx.strokeStyle = col; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, Y(b.h)); ctx.lineTo(Math.round(x) + 0.5, Y(b.l)); ctx.stroke();
+      const top = Y(Math.max(b.o, b.c)), bot = Y(Math.min(b.o, b.c));
+      ctx.fillStyle = col;
+      ctx.fillRect(x - bw / 2, top, bw, Math.max(1, bot - top));
+    }
+
+    for (const l of this.levels) {
+      const y = Math.round(Y(l.price)) + 0.5;
+      ctx.strokeStyle = l.color; ctx.setLineDash(l.dash || [4, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = l.color; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText(l.label, pad.l + 4, y - 2);
+    }
+
+    if (shown === n) {
+      const last = bars[n - 1], y = Y(last.c), col = last.c >= last.o ? up : down;
+      ctx.strokeStyle = col; ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = col;
+      ctx.fillRect(w - pad.r + 2, y - 9, pad.r - 4, 18);
+      ctx.fillStyle = '#06101f'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(this.o.priceFormat(last.c), w - pad.r + 6, y);
+      const t = (performance.now() % 1600) / 1600;
+      ctx.beginPath(); ctx.arc(X(n - 1), y, 3 + t * 9, 0, Math.PI * 2);
+      ctx.fillStyle = hexA(col, 0.35 * (1 - t)); ctx.fill();
+    }
+
+    if (this.hover && this.hover.x >= pad.l && this.hover.x <= w - pad.r) {
+      const i = Math.max(0, Math.min(n - 1, Math.floor((this.hover.x - pad.l) / slot)));
+      const b = bars[i];
+      ctx.strokeStyle = 'rgba(200,210,255,.35)'; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(X(i), pad.t); ctx.lineTo(X(i), pad.t + ih); ctx.stroke(); ctx.setLineDash([]);
+      const f = this.o.priceFormat;
+      this.tip.innerHTML = `<span>${this.o.tipTime ? this.o.tipTime(b.t) : this.o.timeFormat(b.t)}</span>
+        <div>Open<b>${f(b.o)}</b></div><div>High<b>${f(b.h)}</b></div><div>Low<b>${f(b.l)}</b></div>
+        <div>Close<b class="${b.c >= b.o ? 'up' : 'down'}">${f(b.c)}</b></div>`;
+      this.tip.hidden = false;
+      const tw = this.tip.offsetWidth, x = X(i);
+      this.tip.style.left = `${x + 14 + tw > w ? x - tw - 14 : x + 14}px`;
+      this.tip.style.top = `${Math.max(4, this.hover.y - 40)}px`;
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { $, h, icon, api, tweenNumber, fmtUsd, fmtSignedUsd, fmtSignedPct, fmtPct, fmtR, fmtPx, fmtTime, fmtDate, coin, sideTag, statusTag, stagger } from '../util.js';
-import { LineChart, Donut, sparkline } from '../charts.js';
+import { LineChart, Donut, sparkline, CandleChart } from '../charts.js';
+import { live, onLive, watchCandles, errorText, canAskAccess, requestAccess, TV_SYMBOLS } from '../live-market.js';
 import { heroScene, botAvatar } from '../pixel.js';
 
 const MONTH = 30 * 86400000;
@@ -59,6 +60,21 @@ export function mount(root) {
       <div class="kpi-row"><span class="kpi-value">—</span><span class="kpi-delta"></span></div>
       <div class="bar"><i></i></div>
     </section>`).join('')}
+
+    <section class="card span-12 live-card">
+      <header class="card-head">
+        <div class="live-title">
+          <h3>Live Chart</h3>
+          <span class="live-chip" data-ref="liveChip">MEMUAT</span>
+          <span class="sub" data-ref="liveSub">TradingView · Binance</span>
+        </div>
+        <div class="seg" data-ref="tfs">${[['15m', '15m'], ['1h', '1H'], ['4h', '4H'], ['1D', '1D']].map(([v, l]) => `<button data-v="${v}" class="${v === '1h' ? 'on' : ''}">${l}</button>`).join('')}</div>
+      </header>
+      <div class="live-pairs" data-ref="livePairs">${Object.keys(TV_SYMBOLS).map((p) => `<button class="chip${p === 'BTC/USDT' ? ' on' : ''}" data-p="${p}">${p.split('/')[0]}</button>`).join('')}</div>
+      <div class="live-quote"><b class="mono" data-ref="livePrice">—</b><span class="mono" data-ref="liveChg"></span><span class="dim small" data-ref="liveAt"></span></div>
+      <div class="candles" data-ref="candles"><div class="live-empty" data-ref="liveEmpty" hidden></div></div>
+      <div class="note" data-ref="liveNote"></div>
+    </section>
 
     <section class="card span-7">
       <header class="card-head">
@@ -179,11 +195,110 @@ export function mount(root) {
   loadLessons();
   const lessonTimer = setInterval(loadLessons, 30000);
 
+  // live TradingView chart
+  let livePair = 'BTC/USDT', liveTf = '1h', bars = null, stopCandles = null, lastSnap = null;
+  const candle = new CandleChart(ref.candles, {
+    priceFormat: (v) => fmtPx(v),
+    timeFormat: (t) => (liveTf === '1D' ? fmtDate(t) : fmtTime(t)),
+    tipTime: (t) => `${fmtDate(t)} ${fmtTime(t)}`,
+  });
+
+  function showLiveEmpty(err) {
+    const el = ref.liveEmpty;
+    if (!err) { el.hidden = true; return; }
+    el.hidden = false;
+    const local = err.code === 'unavailable';
+    el.replaceChildren(
+      h('b', {}, local ? 'Live chart TradingView aktif di versi claude.ai' : 'TradingView belum tersambung'),
+      h('span', {}, local ? 'Versi lokal ini memakai harga simulasi. Buka link Artifact untuk data pasar sungguhan.' : errorText(err)),
+      canAskAccess(err) ? h('button', { class: 'chip on', onclick: () => requestAccess().then(loadCandles) }, 'Izinkan akses TradingView') : '');
+  }
+
+  function loadCandles() {
+    stopCandles?.();
+    bars = null;
+    candle.setBars([]);
+    const pair = livePair, tf = liveTf;
+    let first = true;
+    stopCandles = watchCandles(pair, tf, (r) => {
+      if (pair !== livePair || tf !== liveTf) return;
+      if (r.error) {
+        const denied = !['server_unavailable', 'tool_error', 'upstream_error', 'rate_limited'].includes(r.error.code);
+        if (denied || !bars) { bars = null; candle.setBars([]); showLiveEmpty(r.error); }
+        return;
+      }
+      bars = r.bars;
+      mergeQuote();
+      candle.setBars(bars, { fresh: first });
+      first = false;
+      showLiveEmpty(null);
+      ref.liveAt.textContent = `bar diperbarui ${fmtTime(r.at)}`;
+    });
+  }
+
+  // keep the forming bar in step with the latest quote between candle refreshes
+  function mergeQuote() {
+    const q = live.quotes[livePair];
+    if (!bars?.length || !q) return;
+    const b = bars[bars.length - 1];
+    b.c = q.price; b.h = Math.max(b.h, q.price); b.l = Math.min(b.l, q.price);
+  }
+
+  function renderLiveHead() {
+    const q = live.quotes[livePair];
+    const chip = ref.liveChip;
+    const label = { live: 'LIVE', stale: 'TERTUNDA', denied: 'OFF', error: 'OFF', unavailable: 'SIMULASI', loading: 'MEMUAT' }[live.status];
+    chip.textContent = label;
+    chip.className = `live-chip ${live.status}`;
+    if (q) {
+      tweenNumber(ref.livePrice, q.price, fmtPx);
+      ref.liveChg.textContent = fmtSignedPct(q.chg);
+      ref.liveChg.className = `mono ${q.chg >= 0 ? 'up' : 'down'}`;
+    } else {
+      const sim = lastSnap?.prices.find((p) => p.sym === livePair);
+      if (sim) tweenNumber(ref.livePrice, sim.price, fmtPx);
+      ref.liveChg.textContent = sim ? 'harga simulasi' : '';
+      ref.liveChg.className = 'dim small';
+    }
+    ref.liveSub.textContent = live.quotesAt ? `TradingView · Binance · kutipan ${fmtTime(live.quotesAt)}` : 'TradingView · Binance';
+  }
+
+  function renderLevels() {
+    const ps = (lastSnap?.positions || []).filter((p) => p.pair === livePair);
+    candle.setLevels(ps.flatMap((p) => [
+      { price: p.entry, color: '#ffc94d', label: `${p.botName} ${p.side} entry` },
+      { price: p.sl, color: '#ff5c7a', label: p.tp1Hit ? 'stop (BE)' : 'SL', dash: [2, 3] },
+      { price: p.tp2, color: '#22e39b', label: 'TP2', dash: [2, 3] },
+    ]));
+    ref.liveNote.textContent = ps.length
+      ? `Garis = ${ps.length} posisi paper di ${livePair}. Harga simulasi bot ditambatkan ke harga TradingView.`
+      : 'Candle dan harga dari TradingView sesuai paket dan langganan bursa akunmu (bisa tertunda). Bar terakhir masih terbentuk.';
+  }
+
+  ref.livePairs.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    livePair = b.dataset.p;
+    ref.livePairs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    ref.livePrice._value = undefined;
+    renderLiveHead(); renderLevels(); loadCandles();
+  });
+  ref.tfs.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    liveTf = b.dataset.v;
+    ref.tfs.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    loadCandles();
+  });
+  const stopLive = onLive(() => { mergeQuote(); renderLiveHead(); });
+  loadCandles();
+
   const donut = new Donut(ref.donut, { size: 170, stroke: 18 });
   ref.donut.prepend(donut.svg);
   let allocKey = '', lastTradeTop = null;
 
   function update(s, first) {
+    lastSnap = s;
+    renderLevels();
+    if (!live.quotes[livePair]) renderLiveHead();
     const a = s.account;
     ref.heroStatus.textContent = s.running ? 'System Online' : 'Engine dijeda';
     tweenNumber(ref.equity, a.equity, fmtUsd, { money: true });
@@ -283,5 +398,5 @@ export function mount(root) {
     ref.metrics.innerHTML = m.map(([l, val]) => `<div><span>${l}</span><b>${val}</b></div>`).join('');
   }
 
-  return { update, destroy: () => clearInterval(lessonTimer) };
+  return { update, destroy: () => { clearInterval(lessonTimer); stopCandles?.(); stopLive(); } };
 }

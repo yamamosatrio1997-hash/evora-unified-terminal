@@ -88,3 +88,16 @@ test('state round-trips through serialize', () => {
   assert.equal(r.balance, e.balance);
   assert.ok(r.equityMin.at(-1).t >= Math.floor(later / MIN) * MIN - MIN);
 });
+
+test('setReference rescales a pair without a jump and keeps it near the reference', () => {
+  const now = Date.UTC(2026, 9, 17, 5);
+  const e = new Engine({ now });
+  for (let i = 1; i <= 300; i++) e.tick(now + i * 1000);
+  const eq0 = e.equity();
+  e.setReference('BTC/USDT', 81618.77);
+  assert.ok(Math.abs(e.market['BTC/USDT'].price - 81618.77) < 1e-6);
+  assert.ok(Math.abs(e.equity() - eq0) < 1e-6, 'rescaling must not change equity');
+  for (let i = 301; i <= 3900; i++) e.tick(now + i * 1000);
+  const dev = Math.abs(Math.log(e.market['BTC/USDT'].price / 81618.77));
+  assert.ok(dev < 0.08, `price drifted ${dev}`);
+});

@@ -1,6 +1,7 @@
 import { $, h, icon, hydrateIcons, tweenNumber, fmtTime, fmtSignedPct, fmtPx, coin, api, fmtPct } from './util.js';
 import { connect, subscribe, store } from './store.js';
 import { brandLogo, mascotScene, sunsetScene } from './pixel.js';
+import { live, onLive, startQuotes } from './live-market.js';
 
 const ROUTES = [
   { path: '/', label: 'Laporan Lab', icon: 'home', load: () => import('./views/dashboard.js') },
@@ -89,7 +90,10 @@ function renderLogs(snap, first) {
 const pairRows = new Map();
 function renderPairs(snap) {
   const list = $('#pairs');
-  const rows = [...snap.prices].sort((a, b) => Math.abs(b.chg24) - Math.abs(a.chg24)).slice(0, 6);
+  // prefer real TradingView quotes when the connector answers
+  const prices = snap.prices.map((p) => (live.quotes[p.sym] ? { ...p, price: live.quotes[p.sym].price, chg24: live.quotes[p.sym].chg } : p));
+  $('#pairsSource').textContent = Object.keys(live.quotes).length ? 'TradingView' : 'simulasi';
+  const rows = [...prices].sort((a, b) => Math.abs(b.chg24) - Math.abs(a.chg24)).slice(0, 6);
   if (pairRows.size !== rows.length || rows.some((p) => !pairRows.has(p.sym))) {
     pairRows.clear();
     list.replaceChildren(...rows.map((p) => {
@@ -217,5 +221,7 @@ subscribe((snap, first) => {
   if (first) rotateBubble();
 });
 connect({ onStatus: (ok) => { $('#connBanner').hidden = ok; } });
+startQuotes();
+onLive(() => { if (store.snap) renderPairs(store.snap); });
 window.addEventListener('hashchange', route);
 route();

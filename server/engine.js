@@ -281,7 +281,9 @@ export class Engine {
         m.driftLeft = -Math.log(1 - this.rng()) * 900;
       }
       m.driftLeft--;
-      const r = m.drift + m.vol * gauss(this.rng);
+      // with a real reference price the walk mean-reverts toward it (half-life ~6 min)
+      const pull = m.ref ? 0.002 * Math.log(m.ref / m.price) : 0;
+      const r = m.drift + pull + m.vol * gauss(this.rng);
       m.price *= Math.exp(r);
       m.rets.push(r);
       if (m.rets.length > 300) m.rets.shift();
@@ -295,6 +297,27 @@ export class Engine {
     }
     if (newHour) this.lastHour = Math.floor(now / HOUR) * HOUR;
     this.tickCount++;
+  }
+
+  // Pin a pair to a real market price. The first call rescales the pair's whole
+  // history, open positions and orders so nothing jumps; later calls only move the target.
+  setReference(sym, price) {
+    const m = this.market[sym];
+    if (!m || !(price > 0)) return;
+    if (!m.ref) {
+      const k = price / m.price;
+      m.price *= k; m.emaFast *= k; m.emaSlow *= k;
+      m.hist = m.hist.map((x) => x * k);
+      m.spark = m.spark.map((x) => x * k);
+      for (const p of this.positions) {
+        if (p.pair !== sym) continue;
+        for (const f of ['entry', 'sl', 'initialSl', 'tp1', 'tp2']) p[f] *= k;
+        p.qty /= k; p.qtyOpen /= k;
+      }
+      for (const o of this.pending) if (o.pair === sym) o.limit *= k;
+      for (const t of this.trades) if (t.pair === sym) { t.entry *= k; t.exit *= k; t.qty /= k; }
+    }
+    m.ref = price;
   }
 
   trendStrength(m) {
@@ -523,7 +546,7 @@ export class Engine {
       const p24 = h[Math.max(0, h.length - 25)];
       return {
         sym: m.sym, base: m.base, color: m.color, price: m.price, chg24: (m.price - p24) / p24,
-        bias: this.bias(m), strength: round(this.trendStrength(m), 3), regime: this.volRegime(m),
+        bias: this.bias(m), strength: round(this.trendStrength(m), 3), regime: this.volRegime(m), ref: m.ref ?? null,
         spark: m.spark.map((x) => +x.toPrecision(6)),
       };
     });
