@@ -1,7 +1,7 @@
-import { $, h, icon, api, tweenNumber, fmtUsd, fmtSignedUsd, fmtSignedPct, fmtPct, fmtR, fmtPx, fmtTime, fmtDate, coin, sideTag, statusTag, stagger } from '../util.js';
+import { $, h, icon, api, prefs, tweenNumber, fmtUsd, fmtSignedUsd, fmtSignedPct, fmtPct, fmtR, fmtPx, fmtTime, fmtDate, coin, sideTag, statusTag, stagger } from '../util.js';
 import { LineChart, Donut, sparkline, CandleChart } from '../charts.js';
 import { live, onLive, watchCandles, errorText, canAskAccess, requestAccess, TV_SYMBOLS } from '../live-market.js';
-import { heroScene, botAvatar } from '../pixel.js';
+import { botAvatar } from '../pixel.js';
 import { startUfo } from '../ufo.js';
 import { alienAudio } from '../alien-audio.js';
 
@@ -19,7 +19,7 @@ export function mount(root) {
   root.innerHTML = `
   <div class="grid">
     <section class="card hero span-8">
-      <canvas class="pixel" width="320" height="118"></canvas>
+      <video class="hero-video" poster="media/hero.jpg" muted loop playsinline preload="auto" aria-hidden="true"><source src="media/hero.webm" type="video/webm"><source src="media/hero.mp4" type="video/mp4"></video>
       <div class="hero-copy">
         <h1>Trading Bot</h1>
         <h2>Auto trade. Lebih terukur.</h2>
@@ -124,7 +124,9 @@ export function mount(root) {
   </div>`;
 
   const ref = Object.fromEntries([...root.querySelectorAll('[data-ref]')].map((el) => [el.dataset.ref, el]));
-  heroScene(root.querySelector('.hero canvas'));
+  const heroVideo = root.querySelector('.hero-video');
+  heroVideo.muted = true; // set as a property too, or some browsers refuse to autoplay
+  if (!prefs.reduceMotion) heroVideo.play().catch(() => {}); // the poster stays if autoplay is blocked
   stagger(root);
 
   ref.eye.addEventListener('click', () => {

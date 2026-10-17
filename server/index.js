@@ -16,6 +16,7 @@ const CONTROL_TOKEN = process.env.CONTROL_TOKEN || '';
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
+  '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.webm': 'video/webm',
 };
 
 function loadState() {
@@ -97,7 +98,21 @@ function serveStatic(req, res, pathname) {
         res.end(html);
       });
     }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    const type = MIME[path.extname(file)] || 'application/octet-stream';
+    // byte ranges, so video can seek and Safari will play it at all
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (range && (range[1] || range[2])) {
+      const size = buf.length;
+      const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+      const end = range[1] && range[2] ? Math.min(size - 1, Number(range[2])) : size - 1;
+      if (start >= size || start > end) {
+        res.writeHead(416, { 'Content-Range': `bytes */${size}` });
+        return res.end();
+      }
+      res.writeHead(206, { 'Content-Type': type, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1, 'Cache-Control': 'no-cache' });
+      return res.end(buf.subarray(start, end + 1));
+    }
+    res.writeHead(200, { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache' });
     res.end(buf);
   });
 }
