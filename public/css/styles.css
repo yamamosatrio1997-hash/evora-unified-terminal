@@ -562,7 +562,7 @@ h1 { text-shadow: 0 0 22px rgba(57, 255, 136, 0.35); }
 
 /* flying saucer over the homepage */
 .ufo {
-  position: fixed; left: 0; top: 0; width: 132px; height: 120px; z-index: 45; pointer-events: none;
+  position: absolute; left: 0; top: 0; width: 132px; height: 120px; z-index: 45; pointer-events: none;
   will-change: transform; filter: drop-shadow(0 0 12px rgba(255, 214, 59, 0.25)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
 @media (max-width: 900px) { .ufo { width: 88px; height: 80px; } }

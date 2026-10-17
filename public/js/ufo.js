@@ -63,8 +63,10 @@ function drawSaucer(ctx, t, beam) {
   });
 }
 
-// Mounts the saucer over `host` (the page) and returns a stop function.
-// onMove receives x in 0..1 across the viewport, so audio can pan with it.
+// Mounts the saucer on the page and returns a stop function. It flies in page
+// coordinates (not the viewport), so scrolling never drags it along: it roams the
+// whole homepage on its own, picking random waypoints and switching moods.
+// onMove receives its x in 0..1 across the page width, so audio can pan with it.
 export function startUfo({ onMove } = {}) {
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -74,41 +76,68 @@ export function startUfo({ onMove } = {}) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
-  const scale = 3;
-  let x = -W * scale, dir = 1, y = 0, beam = 0, beamUntil = 0, pauseUntil = 0;
+  const app = document.getElementById('app');
+  const size = () => ({ w: canvas.offsetWidth, h: canvas.offsetHeight });
+  const bounds = () => {
+    const { w, h } = size();
+    return { maxX: Math.max(0, document.documentElement.clientWidth - w - 8), minY: 70, maxY: Math.max(140, app.scrollHeight - h - 20) };
+  };
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  let { maxX, maxY, minY } = bounds();
+  const pos = { x: rand(0, maxX), y: rand(minY, Math.min(maxY, 500)) };
+  const vel = { x: 0, y: 0 };
+  let mode = 'cruise', modeUntil = 0, target = null, speed = 160, beam = 0, loopC = null, loopA = 0;
   let last = performance.now(), raf = 0, stopped = false;
   const start = last;
+
+  function nextMode(now) {
+    ({ maxX, maxY, minY } = bounds());
+    const r = Math.random();
+    if (r < 0.5) { mode = 'cruise'; speed = rand(110, 230); target = { x: rand(0, maxX), y: rand(minY, maxY) }; modeUntil = now + 9000; }
+    else if (r < 0.68) { mode = 'zip'; speed = rand(650, 900); target = { x: rand(0, maxX), y: rand(minY, maxY) }; modeUntil = now + 2500; }
+    else if (r < 0.86) { mode = 'hover'; modeUntil = now + rand(2200, 4200); }
+    else { mode = 'loop'; loopC = { x: pos.x, y: pos.y + 70 }; loopA = -Math.PI / 2; modeUntil = now + 2600; }
+  }
 
   const frame = (now) => {
     if (stopped) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     const t = (now - start) / 1000;
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const span = vw + W * scale * 2;
-    // cruise across, ease in the turn, pause to beam now and then
-    if (now > pauseUntil) {
-      x += dir * (90 + 40 * Math.sin(t * 0.3)) * dt;
-      if (Math.random() < dt * 0.08 && x > 80 && x < vw - 200) {
-        pauseUntil = now + 2600;
-        beamUntil = now + 2400;
-      }
+    if (now > modeUntil) nextMode(now);
+    if (mode === 'cruise' || mode === 'zip') {
+      const dx = target.x - pos.x, dy = target.y - pos.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 12) nextMode(now);
+      // steer: velocity eases toward the desired heading, so turns are smooth arcs
+      const k = mode === 'zip' ? 5 : 1.6;
+      vel.x += ((dx / (d || 1)) * speed - vel.x) * Math.min(1, dt * k);
+      vel.y += ((dy / (d || 1)) * speed - vel.y) * Math.min(1, dt * k);
+    } else if (mode === 'hover') {
+      vel.x += (-vel.x) * Math.min(1, dt * 3);
+      vel.y += (Math.sin(t * 2) * 12 - vel.y) * Math.min(1, dt * 3);
+    } else if (mode === 'loop') {
+      loopA += dt * 2.6;
+      const tx = loopC.x + Math.cos(loopA) * 70, ty = loopC.y + Math.sin(loopA) * 70;
+      vel.x = (tx - pos.x) / Math.max(dt, 0.016); vel.y = (ty - pos.y) / Math.max(dt, 0.016);
     }
-    if (x > vw + 10) { dir = -1; }
-    if (x < -W * scale - 10) { dir = 1; }
-    beam += ((now < beamUntil ? 1 : 0) - beam) * Math.min(1, dt * 4);
-    y = vh * 0.18 + Math.sin(t * 0.7) * vh * 0.1 + Math.sin(t * 2.3) * 6;
-    const tilt = now < pauseUntil ? 0 : dir * 6;
-    canvas.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) rotate(${tilt}deg)`;
+    pos.x = Math.min(maxX, Math.max(0, pos.x + vel.x * dt));
+    pos.y = Math.min(maxY, Math.max(minY, pos.y + vel.y * dt));
+    beam += ((mode === 'hover' ? 1 : 0) - beam) * Math.min(1, dt * 3);
+    const tilt = Math.max(-18, Math.min(18, vel.x / 14));
+    const wobble = Math.sin(t * 2.3) * 4;
+    canvas.style.transform = `translate(${Math.round(pos.x)}px, ${Math.round(pos.y + wobble)}px) rotate(${tilt.toFixed(1)}deg)`;
     drawSaucer(ctx, t, beam);
-    onMove?.((x + W * scale) / span, beam);
+    onMove?.(maxX ? pos.x / maxX : 0.5, beam);
     raf = requestAnimationFrame(frame);
   };
 
   if (prefs.reduceMotion) {
-    canvas.style.transform = `translate(${window.innerWidth - W * scale - 40}px, 90px)`;
+    canvas.style.transform = `translate(${maxX - 30}px, 90px)`;
     drawSaucer(ctx, 0, 0);
   } else {
+    nextMode(last);
     raf = requestAnimationFrame(frame);
   }
   return () => { stopped = true; cancelAnimationFrame(raf); canvas.remove(); };
