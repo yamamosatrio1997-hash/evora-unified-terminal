@@ -4,7 +4,7 @@ import { botAvatar } from '../pixel.js';
 export function mount(root) {
   root.innerHTML = `
   <div class="page-head"><div><div class="eyebrow">Buku utama · paper</div><h1>Posisi live</h1>
-    <p>Titik = harga terakhir, garis kuning = entry. Setengah posisi ditutup di TP1 lalu stop pindah ke breakeven. Time stop 40 menit.</p></div></div>
+    <p>Titik = harga terakhir, garis kuning = entry. Setengah posisi ditutup di TP1 lalu stop pindah ke breakeven. Posisi yang tidak kena target atau stop ditutup oleh time stop.</p></div></div>
   <div class="stat-cards">
     <div class="card stat"><small>Posisi terbuka</small><b data-ref="count">0</b><div class="sub" data-ref="countSub"></div></div>
     <div class="card stat"><small>Margin terpakai</small><b class="money" data-ref="margin">$0</b><div class="sub">leverage 10x</div></div>

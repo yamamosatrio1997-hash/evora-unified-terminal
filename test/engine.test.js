@@ -101,3 +101,52 @@ test('setReference rescales a pair without a jump and keeps it near the referenc
   const dev = Math.abs(Math.log(e.market['BTC/USDT'].price / 81618.77));
   assert.ok(dev < 0.08, `price drifted ${dev}`);
 });
+
+function syntheticBars(n, now, seed = 3) {
+  let a = seed;
+  const rnd = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
+  const out = {};
+  for (const [sym, p0] of [['BTC/USDT', 70000], ['ETH/USDT', 3000], ['SOL/USDT', 150], ['ARB/USDT', 0.8], ['XRP/USDT', 0.6], ['BNB/USDT', 600], ['DOGE/USDT', 0.15], ['AVAX/USDT', 30]]) {
+    const bars = [];
+    let c = p0;
+    const t0 = Math.floor(now / (4 * HOUR)) * 4 * HOUR - (n - 1) * 4 * HOUR;
+    for (let i = 0; i < n; i++) {
+      const o = c;
+      c = o * Math.exp((rnd() - 0.5) * 0.04 + Math.sin(i / 40) * 0.004);
+      bars.push({ t: t0 + i * 4 * HOUR, o, h: Math.max(o, c) * (1 + rnd() * 0.01), l: Math.min(o, c) * (1 - rnd() * 0.01), c, v: 1 });
+    }
+    out[sym] = bars;
+  }
+  return out;
+}
+
+test('real-candle backtest obeys project rules and keeps the books consistent', () => {
+  const now = Date.UTC(2026, 9, 17, 9);
+  const e = new Engine({ now, bars: syntheticBars(2200, now) });
+  assert.equal(e.source, 'tradingview');
+  assert.ok(e.trades.length > 50, `only ${e.trades.length} trades`);
+  for (const t of e.trades) {
+    const year = new Date(t.openedAt).getUTCFullYear();
+    assert.equal(t.side, year === 2026 ? 'SHORT' : 'LONG', 'direction follows the yearly cycle');
+  }
+  for (const p of e.positions) assert.ok(Math.abs(p.entry - p.initialSl) / p.entry <= MAX_SL + 1e-9);
+  const open = e.positions.reduce((s, p) => s + p.realized, 0);
+  const closed = e.trades.reduce((s, t) => s + t.pnl, 0);
+  assert.ok(Math.abs(e.balance - (10000 + closed)) < 1, 'balance = start + closed pnl');
+  assert.ok(Math.abs(e.equity() - (e.balance + open + e.unrealized())) < 1e-6);
+  assert.ok(e.equitySeries('1Y').points.length > 300);
+  assert.equal(e.snapshot().source, 'tradingview');
+});
+
+test('live quotes close the forming candle on the 4h boundary', () => {
+  const now = Date.UTC(2026, 9, 17, 9);
+  const e = new Engine({ now, bars: syntheticBars(400, now) });
+  const m = e.market['BTC/USDT'];
+  const formingT = m.forming.t;
+  const n = m.ind.n;
+  e.onQuote('BTC/USDT', m.price * 1.001, formingT + HOUR);
+  assert.equal(m.ind.n, n, 'no new bar inside the window');
+  e.onQuote('BTC/USDT', m.price * 1.002, formingT + 4 * HOUR + MIN);
+  assert.equal(m.ind.n, n + 1);
+  assert.equal(m.forming.t, formingT + 4 * HOUR);
+});

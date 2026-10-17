@@ -97,7 +97,12 @@ export function mount(root) {
   api('/api/strategies').then((d) => {
     data = d;
     const r = d.rule;
-    ref.eyebrow.textContent = `${d.strategies.length} strategi · ${d.totalCells} sel`;
+    ref.eyebrow.textContent = `${d.strategies.length} strategi · ${d.totalCells} sel${d.cellsSource === 'ilustrasi' ? ' · ilustrasi' : ''}`;
+    if (d.cellsSource === 'ilustrasi') {
+      root.querySelector('.page-head p').textContent += d.source === 'tradingview'
+        ? ' Heatmap ini masih contoh ilustrasi; hasil 4 bot di halaman lain sudah dihitung dari candle TradingView.'
+        : ' Heatmap ini masih contoh ilustrasi.';
+    }
     ref.rule.innerHTML = `<b>Aturan ${r.version}:</b> sel aktif bila dari ${r.window} trade terakhir <b>n ≥ ${r.minN}</b>, kedua paruh positif, <b>PF ≥ ${r.minPF.toString().replace('.', ',')}</b>, rata-rata <b>≥ +${r.minAvgR.toString().replace('.', ',')}R</b> dan batas bawah keyakinan <b>≥ +${r.minLcbR.toString().replace('.', ',')}R</b>. Buku utama hanya mengambil sel aktif <b>${r.mainBookTFs.join('/')}</b> yang searah siklus (sekarang <b>${d.cycle}</b>).`;
     ref.activeCount.textContent = `${d.activeCells} / ${d.totalCells}`;
     ref.mainSub.textContent = `${d.mainBook.length} sel masuk buku utama (${d.cycle})`;

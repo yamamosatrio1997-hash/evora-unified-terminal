@@ -99,3 +99,30 @@ export function watchCandles(pair, interval, handler) {
   });
   return () => { cancelled = true; stop?.(); };
 }
+
+// A year of 4h candles for every pair, for the bot backtest. Rejects with an McpError-like
+// object; one retry for errors the platform marks retryable.
+export async function fetchHistory(count = 2200) {
+  const mcp = await getMcp();
+  if (!mcp) throw { code: 'unavailable' };
+  const one = async (tv, retried = false) => {
+    try {
+      const res = await mcp.callTool(TV_SERVER, OHLCV_TOOL, { symbol: tv, interval: '4h', count, format: 'columns' }, { cache: { staleTime: 300000, gcTime: 3600000 } });
+      const b = res?.payload?.bars;
+      if (!b?.t?.length) throw { code: 'tool_error', message: `tidak ada candle untuk ${tv}` };
+      return b.t.map((t, i) => ({ t: t * 1000, o: b.o[i], h: b.h[i], l: b.l[i], c: b.c[i], v: b.v[i] }));
+    } catch (err) {
+      if (err?.retryable && !retried) {
+        await new Promise((r) => setTimeout(r, (err.retryAfterMs ?? 1500) + Math.random() * 1000));
+        return one(tv, true);
+      }
+      throw err;
+    }
+  };
+  const entries = Object.entries(TV_SYMBOLS);
+  // the first call alone, so claude.ai can ask for consent once before the rest run
+  const out = { [entries[0][0]]: await one(entries[0][1]) };
+  const rest = await Promise.all(entries.slice(1).map(([, tv]) => one(tv)));
+  entries.slice(1).forEach(([pair], i) => { out[pair] = rest[i]; });
+  return out;
+}

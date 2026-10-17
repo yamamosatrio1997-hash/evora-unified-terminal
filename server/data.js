@@ -37,10 +37,10 @@ export const DIRECTIONS = ['LONG', 'SHORT'];
 // Forward-test bots running live on the paper book.
 // style: 'trend' follows the short-term drift, 'revert' fades stretched moves.
 export const BOTS = [
-  { id: 'trend', name: 'Trend Hunter', strategy: 'Trend Hunter', pairs: ['BTC/USDT', 'ETH/USDT'], style: 'trend', rr: 2.4, color: '#22e39b', tf: '4H' },
-  { id: 'momentum', name: 'EMA Momentum', strategy: 'EMA Momentum', pairs: ['SOL/USDT', 'AVAX/USDT'], style: 'trend', rr: 2.0, color: '#3b82f6', tf: '1H' },
-  { id: 'range', name: 'Range Break', strategy: 'Range Break', pairs: ['ARB/USDT', 'DOGE/USDT'], style: 'revert', rr: 1.6, color: '#a78bfa', tf: '1H' },
-  { id: 'sweep', name: 'Liquidity Sweep', strategy: 'Liquidity Sweep', pairs: ['XRP/USDT', 'BNB/USDT'], style: 'revert', rr: 1.8, color: '#fbbf24', tf: '4H' },
+  { id: 'trend', rule: 'donchian', name: 'Trend Hunter', strategy: 'Trend Hunter', pairs: ['BTC/USDT', 'ETH/USDT'], style: 'trend', rr: 2.4, color: '#22e39b', tf: '4H' },
+  { id: 'momentum', rule: 'emaCross', name: 'EMA Momentum', strategy: 'EMA Momentum', pairs: ['SOL/USDT', 'AVAX/USDT'], style: 'trend', rr: 2.0, color: '#3b82f6', tf: '1H' },
+  { id: 'range', rule: 'rsiFade', name: 'Range Break', strategy: 'Range Break', pairs: ['ARB/USDT', 'DOGE/USDT'], style: 'revert', rr: 1.6, color: '#a78bfa', tf: '1H' },
+  { id: 'sweep', rule: 'sweep', name: 'Liquidity Sweep', strategy: 'Liquidity Sweep', pairs: ['XRP/USDT', 'BNB/USDT'], style: 'revert', rr: 1.8, color: '#fbbf24', tf: '4H' },
 ];
 
 // Active-cell rule v1.2c

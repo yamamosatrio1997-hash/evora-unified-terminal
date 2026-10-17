@@ -442,6 +442,8 @@ dl.gloss dd { margin: 3px 0 0; color: #cdd6fa; font-size: 13px; }
 .toast b { font-size: 13px; }
 .toast small { display: block; color: var(--muted); font-size: 12px; }
 .conn-banner { position: fixed; left: 50%; top: 76px; transform: translateX(-50%); z-index: 60; padding: 8px 14px; border-radius: 10px; background: rgba(255, 201, 77, .15); border: 1px solid var(--yellow); color: var(--yellow); font-size: 13px; font-weight: 600; }
+.data-banner { top: 120px; background: rgba(61, 139, 255, .15); border-color: var(--blue); color: #9cc3ff; }
+.data-banner[data-tone="warn"] { background: rgba(255, 201, 77, .15); border-color: var(--yellow); color: var(--yellow); }
 .skeleton { background: linear-gradient(90deg, rgba(120,140,220,.06), rgba(120,140,220,.14), rgba(120,140,220,.06)); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 8px; min-height: 18px; }
 .note { font-size: 12px; color: var(--dim); margin-top: 10px; }
 .note.warn { color: var(--yellow); }

@@ -9,6 +9,9 @@ const MAX_TRADES = 2000;
 const MAX_LOGS = 120;
 const SPARK_EVERY = 5; // seconds between sparkline samples
 const TIME_STOP = 40 * MIN;
+const BAR = 4 * HOUR; // candle size for the TradingView backtest
+const BAR_TIME_STOP = 30 * BAR;
+const WARMUP = 210;
 
 const sideSign = (side) => (side === 'LONG' ? 1 : -1);
 const round = (x, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
@@ -76,7 +79,10 @@ function percentile(sorted, q) {
 // ---------- engine ----------
 
 export class Engine {
-  constructor({ seed = 1997, now = Date.now(), saved = null } = {}) {
+  // bars: { 'BTC/USDT': [{t,o,h,l,c,v}, ...] } with t = bar open time in ms, oldest first, last bar still forming.
+  // With bars the engine backtests the bots on real candles and forward-tests on live quotes;
+  // without them it seeds a synthetic history and runs a simulated price walk.
+  constructor({ seed = 1997, now = Date.now(), saved = null, bars = null } = {}) {
     this.seed = seed;
     this.rng = mulberry32((seed * 7919 + Math.floor(now / 1000)) >>> 0);
     this.running = true;
@@ -93,11 +99,161 @@ export class Engine {
     this.tickCount = 0;
     this.cells = this.#buildCells(mulberry32(seed + 11));
 
-    if (saved && saved.v === 1) this.#restore(saved, now);
+    this.real = false;
+    this.source = 'simulasi';
+    this.timeStop = TIME_STOP;
+    if (bars) this.#initReal(bars, now);
+    else if (saved && saved.v === 1) this.#restore(saved, now);
     else this.#seedHistory(mulberry32(seed), now);
   }
 
   // ----- seeding -----
+
+  // ----- real candles: backtest then forward test -----
+
+  #initReal(bars, now) {
+    this.real = true;
+    this.source = 'tradingview';
+    this.timeStop = BAR_TIME_STOP;
+    const pairs = PAIRS.filter((p) => bars[p.sym]?.length > WARMUP + 2);
+    if (!pairs.length) throw new Error('no usable bars');
+    this.balance = START_EQUITY;
+    for (const p of pairs) {
+      const list = bars[p.sym];
+      this.market[p.sym] = {
+        sym: p.sym, base: p.base, color: p.color, price: list[0].o, emaFast: list[0].o, emaSlow: list[0].o,
+        vol: p.vol, garchVar: p.vol * p.vol, drift: 0, driftLeft: 0, rets: [], spark: [], hist: [list[0].o],
+        ind: null, volReg: 'normal', chg24: null, forming: list[list.length - 1],
+      };
+    }
+    // replay every closed bar in time order across pairs
+    const events = [];
+    for (const p of pairs) bars[p.sym].slice(0, -1).forEach((bar) => events.push({ sym: p.sym, bar }));
+    events.sort((a, b) => a.bar.t - b.bar.t);
+    let lastT = null;
+    for (const { sym, bar } of events) {
+      if (lastT != null && bar.t !== lastT) this.equityHour.push({ t: lastT + BAR, v: round(this.equity()) });
+      lastT = bar.t;
+      this.#barStep(sym, bar, bar.t + BAR);
+    }
+    if (lastT != null) this.equityHour.push({ t: lastT + BAR, v: round(this.equity()) });
+    for (const p of pairs) {
+      const m = this.market[p.sym];
+      m.price = m.forming.c;
+      const closes = bars[p.sym].map((b) => b.c);
+      m.chg24 = closes.length > 7 ? (m.price - closes[closes.length - 7]) / closes[closes.length - 7] : 0;
+    }
+    this.equityMin = this.equityHour.filter((q) => q.t >= now - DAY).map((q) => ({ ...q }));
+    if (this.equityMin.length < 2) this.equityMin = this.equityHour.slice(-2).map((q) => ({ ...q }));
+    this.lastHour = Math.floor(now / HOUR) * HOUR;
+    this.#log('system', now, 'Backtest selesai', `${this.trades.length} trade di candle 4H TradingView · lanjut forward test`, null, 'info');
+  }
+
+  // One closed candle: manage open positions with its high/low (stop first when both are touched),
+  // then update indicators and let the bots look for a new entry at the close.
+  #barStep(sym, bar, closeT) {
+    const m = this.market[sym];
+    for (const pos of [...this.positions]) {
+      if (pos.pair !== sym) continue;
+      const s = sideSign(pos.side);
+      const low = s > 0 ? bar.l : bar.h, high = s > 0 ? bar.h : bar.l;
+      if ((pos.sl - low) * s >= 0) { this.#close(pos, pos.sl, pos.tp1Hit ? 'TP1' : 'SL', closeT); continue; }
+      if (!pos.tp1Hit && (high - pos.tp1) * s >= 0) {
+        this.#fill(pos, pos.qtyOpen / 2, pos.tp1);
+        pos.tp1Hit = true;
+        pos.sl = pos.entry;
+      }
+      if ((high - pos.tp2) * s >= 0) { this.#close(pos, pos.tp2, 'TP2', closeT); continue; }
+      if (closeT - pos.openedAt >= this.timeStop) this.#close(pos, bar.c, 'TIME', closeT);
+    }
+    m.price = bar.c;
+    this.#updateIndicators(m, bar);
+    if (m.ind.n < WARMUP || !this.running) return;
+    for (const bot of BOTS) {
+      if (!bot.pairs.includes(sym) || this.positions.some((p) => p.bot === bot.id && p.pair === sym)) continue;
+      const side = this.#ruleSignal(bot.rule, m.ind, bar);
+      if (!side || side !== cycleFor(closeT)) continue;
+      const i = m.ind;
+      const aligned = side === (i.ema50 >= i.ema200 ? 'LONG' : 'SHORT');
+      const stretch = ((bar.c - i.ema50) / i.atr) * sideSign(side);
+      const conf = clamp(0.5 + 0.08 * Math.tanh(stretch) + (aligned ? 0.04 : -0.04) - (m.volReg === 'tinggi' ? 0.04 : 0), 0.35, 0.8);
+      const slPct = clamp((1.5 * i.atr) / bar.c, 0.005, MAX_SL);
+      this.#open({ bot: bot.id, pair: sym, side, slPct, conf, rr: bot.rr, tags: { session: sessionOf(closeT), volRegime: m.volReg, aligned } }, bar.c, closeT);
+    }
+  }
+
+  #updateIndicators(m, bar) {
+    const i = m.ind || (m.ind = { n: 0, ema20: bar.c, ema50: bar.c, ema200: bar.c, atr: bar.h - bar.l || bar.c * 0.01, gain: 0, loss: 0, rsi: 50, highs: [], lows: [], atrPct: [], baseVar: 0, gVar: 0, prevClose: bar.c });
+    const prev = { ema20: i.ema20, ema50: i.ema50, rsi: i.rsi, close: i.prevClose, donHigh: Math.max(...i.highs), donLow: Math.min(...i.lows) };
+    const tr = Math.max(bar.h - bar.l, Math.abs(bar.h - i.prevClose), Math.abs(bar.l - i.prevClose));
+    i.atr += (tr - i.atr) / 14;
+    const ch = bar.c - i.prevClose;
+    i.gain += (Math.max(ch, 0) - i.gain) / 14;
+    i.loss += (Math.max(-ch, 0) - i.loss) / 14;
+    i.rsi = i.loss === 0 ? 100 : 100 - 100 / (1 + i.gain / i.loss);
+    i.ema20 += (2 / 21) * (bar.c - i.ema20);
+    i.ema50 += (2 / 51) * (bar.c - i.ema50);
+    i.ema200 += (2 / 201) * (bar.c - i.ema200);
+    // GARCH(1,1) on 4h log returns, stored in per-second units like the simulated walk
+    const r = Math.log(bar.c / i.prevClose);
+    i.baseVar = i.n < 2 ? r * r : i.baseVar + (r * r - i.baseVar) / 500;
+    i.gVar = i.n < 2 ? r * r : i.baseVar * 0.02 + 0.08 * r * r + 0.9 * i.gVar;
+    m.vol = Math.sqrt(i.baseVar / (BAR / SEC)) || m.vol;
+    m.garchVar = i.gVar / (BAR / SEC) || m.garchVar;
+    i.atrPct.push(i.atr / bar.c);
+    if (i.atrPct.length > 100) i.atrPct.shift();
+    const med = [...i.atrPct].sort((a, b) => a - b)[Math.floor(i.atrPct.length / 2)];
+    m.volReg = i.atr / bar.c > med * 1.25 ? 'tinggi' : i.atr / bar.c < med * 0.8 ? 'rendah' : 'normal';
+    i.prev = prev;
+    i.highs.push(bar.h); i.lows.push(bar.l);
+    if (i.highs.length > 20) { i.highs.shift(); i.lows.shift(); }
+    i.prevClose = bar.c;
+    i.n++;
+    m.emaFast = i.ema20;
+    m.emaSlow = i.ema50;
+    m.spark.push(bar.c);
+    if (m.spark.length > 60) m.spark.shift();
+  }
+
+  #ruleSignal(rule, i, bar) {
+    const p = i.prev;
+    switch (rule) {
+      case 'donchian': // close breaks the prior 20-bar range in the direction of the EMA trend
+        if (bar.c > p.donHigh && p.close <= p.donHigh && i.ema20 > i.ema50) return 'LONG';
+        if (bar.c < p.donLow && p.close >= p.donLow && i.ema20 < i.ema50) return 'SHORT';
+        return null;
+      case 'emaCross':
+        if (p.ema20 <= p.ema50 && i.ema20 > i.ema50) return 'LONG';
+        if (p.ema20 >= p.ema50 && i.ema20 < i.ema50) return 'SHORT';
+        return null;
+      case 'rsiFade':
+        if (p.rsi >= 30 && i.rsi < 30) return 'LONG';
+        if (p.rsi <= 70 && i.rsi > 70) return 'SHORT';
+        return null;
+      case 'sweep': // wick through the prior range, close back inside
+        if (bar.l < p.donLow && bar.c > p.donLow) return 'LONG';
+        if (bar.h > p.donHigh && bar.c < p.donHigh) return 'SHORT';
+        return null;
+      default: return null;
+    }
+  }
+
+  // Live TradingView quote in real mode: update the forming candle, close it on the 4h boundary.
+  onQuote(sym, price, now = Date.now(), chg24 = null) {
+    const m = this.market[sym];
+    if (!this.real || !m || !(price > 0)) return;
+    m.price = price;
+    if (chg24 != null) m.chg24 = chg24;
+    const f = m.forming;
+    if (now >= f.t + BAR) {
+      this.#barStep(sym, f, f.t + BAR);
+      m.price = price;
+      m.forming = { t: Math.floor(now / BAR) * BAR, o: price, h: price, l: price, c: price, v: 0 };
+    } else {
+      f.h = Math.max(f.h, price); f.l = Math.min(f.l, price); f.c = price;
+    }
+    if (this.running) this.#managePositions(now);
+  }
 
   #initMarket(rng, now) {
     for (const p of PAIRS) {
@@ -321,18 +477,26 @@ export class Engine {
   }
 
   trendStrength(m) {
+    if (this.real) return m.ind ? (m.ind.ema20 - m.ind.ema50) / m.ind.atr : 0;
     return (m.emaFast - m.emaSlow) / m.emaSlow / (m.vol * Math.sqrt(300));
   }
 
   bias(m) { return m.emaFast >= m.emaSlow ? 'LONG' : 'SHORT'; }
 
   volRegime(m) {
+    if (this.real) return m.volReg;
     const ratio = Math.sqrt(m.garchVar) / m.vol;
     return ratio > 1.15 ? 'tinggi' : ratio < 0.88 ? 'rendah' : 'normal';
   }
 
   tick(now = Date.now()) {
     this.now = now;
+    if (this.real) {
+      // prices only move on live quotes; the second tick handles time stops and the equity series
+      if (this.running) this.#managePositions(now);
+      this.#updateEquitySeries(now);
+      return;
+    }
     this.#stepMarket(now);
     if (this.running) {
       this.#managePending(now);
@@ -425,7 +589,7 @@ export class Engine {
       let status = null, price = px;
       if ((pos.sl - px) * s >= 0) { status = pos.tp1Hit ? 'TP1' : 'SL'; price = pos.sl; }
       else if (beyond(pos.tp2)) { status = 'TP2'; price = pos.tp2; }
-      else if (now - pos.openedAt >= TIME_STOP) status = 'TIME';
+      else if (now - pos.openedAt >= this.timeStop) status = 'TIME';
       if (status) this.#close(pos, price, status, now);
     }
   }
@@ -545,7 +709,7 @@ export class Engine {
       const h = m.hist;
       const p24 = h[Math.max(0, h.length - 25)];
       return {
-        sym: m.sym, base: m.base, color: m.color, price: m.price, chg24: (m.price - p24) / p24,
+        sym: m.sym, base: m.base, color: m.color, price: m.price, chg24: this.real ? m.chg24 ?? 0 : (m.price - p24) / p24,
         bias: this.bias(m), strength: round(this.trendStrength(m), 3), regime: this.volRegime(m), ref: m.ref ?? null,
         spark: m.spark.map((x) => +x.toPrecision(6)),
       };
@@ -560,7 +724,7 @@ export class Engine {
         id: p.id, bot: p.bot, botName: p.botName, pair: p.pair, side: p.side, entry: p.entry, price: px,
         sl: p.sl, initialSl: p.initialSl, tp1: p.tp1, tp2: p.tp2, tp1Hit: p.tp1Hit, qty: p.qty, qtyOpen: p.qtyOpen,
         notional: p.qtyOpen * px, margin: (p.qtyOpen * px) / LEVERAGE, upnl: round(upnl), r: upnl / p.riskUsd,
-        openedAt: p.openedAt, timeLeft: Math.max(0, p.openedAt + TIME_STOP - this.now), conf: p.conf, tags: p.tags,
+        openedAt: p.openedAt, timeLeft: Math.max(0, p.openedAt + this.timeStop - this.now), conf: p.conf, tags: p.tags,
       };
     });
   }
@@ -592,7 +756,7 @@ export class Engine {
   snapshot() {
     const bots = this.botsView();
     return {
-      t: this.now, running: this.running, uptime: this.now - this.bootAt,
+      t: this.now, running: this.running, uptime: this.now - this.bootAt, source: this.source,
       account: this.account(), kpi: this.kpis(), prices: this.pricesView(),
       positions: this.positionsView(), pending: this.pendingView(), bots,
       allocation: this.allocation(), logs: this.logs.slice(-30),
@@ -641,7 +805,7 @@ export class Engine {
     }).sort((a, b) => b.best - a.best);
     const cycle = cycleFor(this.now);
     const mainBook = this.cells.filter((c) => c.active && RULE.mainBookTFs.includes(c.tf) && c.dir === cycle);
-    return { rule: RULE, cycle, strategies: byStrategy, totalCells: this.cells.length, activeCells: this.cells.filter((c) => c.active).length, mainBook };
+    return { rule: RULE, cycle, cellsSource: 'ilustrasi', source: this.source, strategies: byStrategy, totalCells: this.cells.length, activeCells: this.cells.filter((c) => c.active).length, mainBook };
   }
 
   lessonsView() {

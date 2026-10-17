@@ -22,9 +22,9 @@ export function mount(root) {
         <h1>Trading Bot</h1>
         <h2>Auto trade. Lebih terukur.</h2>
         <div class="hero-status"><span class="dot"></span><span data-ref="heroStatus">System Online</span></div>
-        <div class="hero-meta">Scanning 24/7 • 8 pair • Futures 10x</div>
+        <div class="hero-meta" data-ref="heroMeta">Scanning 24/7 • 8 pair • Futures 10x</div>
       </div>
-      <span class="hero-chip">PAPER MODE · SIMULASI</span>
+      <span class="hero-chip" data-ref="heroChip">PAPER MODE · SIMULASI</span>
     </section>
 
     <section class="card equity-card span-4">
@@ -301,6 +301,7 @@ export function mount(root) {
     if (!live.quotes[livePair]) renderLiveHead();
     const a = s.account;
     ref.heroStatus.textContent = s.running ? 'System Online' : 'Engine dijeda';
+    ref.heroChip.textContent = s.source === 'tradingview' ? 'PAPER · CANDLE TRADINGVIEW' : 'PAPER MODE · SIMULASI';
     tweenNumber(ref.equity, a.equity, fmtUsd, { money: true });
     ref.change.className = `equity-change ${a.todayPnl >= 0 ? 'up' : 'down'}`;
     ref.change.textContent = `${fmtSignedUsd(a.todayPnl)} (${fmtSignedPct(a.todayPct)}) 24 jam`;
