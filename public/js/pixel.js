@@ -224,12 +224,63 @@ export function heroScene(canvas) {
   let v = 0;
   for (let i = 0; i < 70; i++) { v += (rnd() - 0.38) * 3.2; chart.push(v); }
   const cMin = Math.min(...chart), cMax = Math.max(...chart);
-  // the saucer crosses the city left to right, dipping over the rooftops, then loops round
-  const FLIGHT = 11;
+  // The saucer's flight, as keyframes (seconds, centre x/y in art pixels, scale, behind the
+  // near towers or in front): it weaves in from the right between the towers, stops to beam
+  // the street, swoops up close to the camera, drifts off toward the moon, then warps away.
+  const LOOP = 15;
+  const KEYS = [
+    { t: 0, x: W + 30, y: 54, s: 1, lin: true },
+    { t: 1.6, x: W * 0.74, y: 44, s: 1, lin: true },
+    { t: 3.2, x: W * 0.56, y: 58, s: 1 },
+    { t: 4.0, x: W * 0.5, y: 50, s: 1 },
+    { t: 6.0, x: W * 0.5, y: 48, s: 1 },
+    { t: 8.0, x: W * 0.64, y: 66, s: 3.5 },
+    { t: 8.8, x: W * 0.62, y: 62, s: 3.5 },
+    { t: 11.0, x: W - 74, y: 26, s: 0.8 },
+    { t: 12.2, x: W - 74, y: 28, s: 0.8 },
+    { t: 12.6, x: W + 70, y: 24, s: 0.8, lin: true },
+    { t: LOOP, x: W + 70, y: 24, s: 0.8 },
+  ];
+  const BEAM = [4.3, 5.8], FRONT_FROM = 6.2, WARP = [12.2, 12.6];
   const ufoAt = (t) => {
-    const p = ((t + FLIGHT * 0.6) % FLIGHT) / FLIGHT;
-    return { x: -50 + p * (W + 90), y: 10 + Math.sin(p * Math.PI * 3) * 7 + Math.sin(t * 2.1) * 2, p };
+    const lt = ((t % LOOP) + LOOP) % LOOP;
+    let i = 0;
+    while (i < KEYS.length - 2 && KEYS[i + 1].t <= lt) i++;
+    const a = KEYS[i], b = KEYS[i + 1];
+    let f = (lt - a.t) / (b.t - a.t);
+    if (!a.lin) f = f * f * (3 - 2 * f);
+    const mix = (k) => a[k] + (b[k] - a[k]) * f;
+    return { lt, x: mix('x'), y: mix('y') + Math.sin(t * 2.1) * 1.5, s: Math.round(mix('s') * 4) / 4 };
   };
+  function drawFlyer(ctx, t, front) {
+    const u = ufoAt(t);
+    if ((u.lt >= FRONT_FROM) !== front) return;
+    // light trail while moving fast; a long streak when it warps out
+    const warp = u.lt > WARP[0] && u.lt < WARP[1] + 0.4;
+    for (let k = 14; k >= 1; k--) {
+      const q = ufoAt(t - k * (warp ? 0.03 : 0.06));
+      if (q.lt > u.lt) continue; // no trail across the loop
+      ctx.fillStyle = `rgba(34,240,255,${(warp ? 0.7 : 0.35) * (1 - k / 14)})`;
+      ctx.fillRect(Math.round(q.x - 4 * q.s), Math.round(q.y + 1 * q.s), Math.max(2, Math.round(8 * q.s)), Math.max(1, Math.round(q.s)));
+    }
+    // tractor beam onto the street
+    if (u.lt > BEAM[0] && u.lt < BEAM[1]) {
+      const k = Math.min(1, (u.lt - BEAM[0]) / 0.3, (BEAM[1] - u.lt) / 0.3);
+      for (let y = Math.round(u.y + 4); y < H; y++) {
+        const d = (y - u.y) / (H - u.y);
+        const half = 4 + d * 16;
+        ctx.fillStyle = `rgba(150,240,255,${(0.32 - d * 0.22) * k})`;
+        ctx.fillRect(Math.round(u.x - half), y, Math.round(half * 2), 1);
+      }
+    }
+    if (u.x < -40 || u.x > W + 40) return;
+    const sc = u.s * 2;
+    ctx.save();
+    ctx.translate(Math.round(u.x - 10 * sc), Math.round(u.y - 4 * sc));
+    ctx.scale(sc, sc);
+    drawUfo(ctx, 0, 0, t);
+    ctx.restore();
+  }
 
   runScene(canvas, (ctx, t) => {
     bandedSky(ctx, W, 0, H, ['#010503', '#03130a', '#062512', '#0b3d1f', '#12552d']);
@@ -276,6 +327,7 @@ export function heroScene(canvas) {
       px = x; py = y;
     }
     if (px != null && Math.floor(t * 4) % 2) { ctx.fillStyle = '#d4ffe4'; ctx.fillRect(px - 1, py - 1, 3, 3); }
+    drawFlyer(ctx, t, false); // weaving behind the near towers
     // near skyline: neon windows and flickering signs
     for (const b of near) {
       ctx.fillStyle = '#020b06';
@@ -313,19 +365,7 @@ export function heroScene(canvas) {
       const y = (r.y + t * r.v * 20) % H, x = (r.x - t * r.v * 4 + W) % W;
       ctx.fillRect(Math.round(x), Math.round(y), 1, 2);
     }
-    // UFO with the alien pilot, leaving a fading light trail
-    const u = ufoAt(t);
-    for (let k = 14; k >= 1; k--) {
-      const q = ufoAt(t - k * 0.06);
-      if (q.p > u.p) continue; // no trail across the wrap
-      ctx.fillStyle = `rgba(34,240,255,${0.5 * (1 - k / 14)})`;
-      ctx.fillRect(Math.round(q.x + 2), Math.round(q.y + 10), 4, 2);
-    }
-    ctx.save();
-    ctx.translate(Math.round(u.x), Math.round(u.y));
-    ctx.scale(2, 2);
-    drawUfo(ctx, 0, 0, t);
-    ctx.restore();
+    drawFlyer(ctx, t, true); // close to the camera, in front of everything
   }, 30);
 }
 
