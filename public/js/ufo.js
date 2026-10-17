@@ -1,5 +1,5 @@
-// A pixel-art flying saucer with an alien pilot that cruises back and forth over the page.
-// Drawn on its own low-resolution canvas fixed above the content; it never takes clicks.
+// A pixel-art flying saucer with an alien pilot that bobs and circles the whole page.
+// Drawn on its own low-resolution canvas positioned over the content; it never takes clicks.
 import { prefs } from './util.js';
 
 const W = 44, H = 40; // sprite canvas in art pixels (scaled 3x on screen)
@@ -64,8 +64,9 @@ function drawSaucer(ctx, t, beam) {
 }
 
 // Mounts the saucer on the page and returns a stop function. It flies in page
-// coordinates (not the viewport), so scrolling never drags it along: it roams the
-// whole homepage on its own, picking random waypoints and switching moods.
+// coordinates (not the viewport), so scrolling never drags it along. The flight is a
+// fixed routine: bob up and down in place (beaming at the end), then fly one full lap
+// around the whole page along a rounded rectangle hugging its edges, then bob again.
 // onMove receives its x in 0..1 across the page width, so audio can pan with it.
 export function startUfo({ onMove } = {}) {
   const canvas = document.createElement('canvas');
@@ -77,27 +78,60 @@ export function startUfo({ onMove } = {}) {
   ctx.imageSmoothingEnabled = false;
 
   const app = document.getElementById('app');
-  const size = () => ({ w: canvas.offsetWidth, h: canvas.offsetHeight });
-  const bounds = () => {
-    const { w, h } = size();
-    return { maxX: Math.max(0, document.documentElement.clientWidth - w - 8), minY: 70, maxY: Math.max(140, app.scrollHeight - h - 20) };
-  };
-  const rand = (a, b) => a + Math.random() * (b - a);
+  const BOB_TIME = 6, LAP_SPEED = 420, APPROACH_SPEED = 520;
+  let maxX = 0, minY = 70, maxY = 140, path = null;
 
-  let { maxX, maxY, minY } = bounds();
-  const pos = { x: rand(0, maxX), y: rand(minY, Math.min(maxY, 500)) };
+  // Rounded-rectangle loop around the page, parameterised by arc length (clockwise).
+  function measure() {
+    maxX = Math.max(0, document.documentElement.clientWidth - canvas.offsetWidth - 8);
+    maxY = Math.max(minY + 140, app.scrollHeight - canvas.offsetHeight - 20);
+    const w = maxX, h = maxY - minY, r = Math.min(220, w / 3, h / 3);
+    const straight = [w - 2 * r, h - 2 * r, w - 2 * r, h - 2 * r];
+    const arc = (Math.PI / 2) * r;
+    path = { w, h, r, straight, arc, len: straight.reduce((a, b) => a + b, 0) + 4 * arc };
+  }
+
+  function pointAt(s) {
+    const { w, h, r, straight, arc, len } = path;
+    s = ((s % len) + len) % len;
+    // corner centres in order: top-right, bottom-right, bottom-left, top-left
+    const corners = [[w - r, r], [w - r, h - r], [r, h - r], [r, r]];
+    const starts = [[r, 0], [w, r], [w - r, h], [0, h - r]];
+    const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+    for (let i = 0; i < 4; i++) {
+      if (s <= straight[i]) return { x: starts[i][0] + dirs[i][0] * s, y: minY + starts[i][1] + dirs[i][1] * s };
+      s -= straight[i];
+      if (s <= arc || i === 3) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 2 + Math.min(1, s / arc) * (Math.PI / 2);
+        return { x: corners[i][0] + Math.cos(a) * r, y: minY + corners[i][1] + Math.sin(a) * r };
+      }
+      s -= arc;
+    }
+    return { x: r, y: minY };
+  }
+
+  function nearestS(p) {
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < 240; i++) {
+      const s = (i / 240) * path.len, q = pointAt(s);
+      const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+      if (d < bestD) { bestD = d; best = s; }
+    }
+    return best;
+  }
+
+  measure();
+  const pos = { x: maxX * 0.62, y: minY + 160 };
   const vel = { x: 0, y: 0 };
-  let mode = 'cruise', modeUntil = 0, target = null, speed = 160, beam = 0, loopC = null, loopA = 0;
+  let phase = 'bob', phaseT = 0, baseY = pos.y, s = 0, lapLeft = 0, beam = 0;
   let last = performance.now(), raf = 0, stopped = false;
   const start = last;
 
-  function nextMode(now) {
-    ({ maxX, maxY, minY } = bounds());
-    const r = Math.random();
-    if (r < 0.5) { mode = 'cruise'; speed = rand(110, 230); target = { x: rand(0, maxX), y: rand(minY, maxY) }; modeUntil = now + 9000; }
-    else if (r < 0.68) { mode = 'zip'; speed = rand(650, 900); target = { x: rand(0, maxX), y: rand(minY, maxY) }; modeUntil = now + 2500; }
-    else if (r < 0.86) { mode = 'hover'; modeUntil = now + rand(2200, 4200); }
-    else { mode = 'loop'; loopC = { x: pos.x, y: pos.y + 70 }; loopA = -Math.PI / 2; modeUntil = now + 2600; }
+  function begin(next) {
+    phase = next; phaseT = 0;
+    if (next === 'bob') baseY = pos.y;
+    if (next === 'approach') { measure(); s = nearestS(pos); }
+    if (next === 'lap') lapLeft = path.len;
   }
 
   const frame = (now) => {
@@ -105,27 +139,34 @@ export function startUfo({ onMove } = {}) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     const t = (now - start) / 1000;
-    if (now > modeUntil) nextMode(now);
-    if (mode === 'cruise' || mode === 'zip') {
-      const dx = target.x - pos.x, dy = target.y - pos.y;
-      const d = Math.hypot(dx, dy);
-      if (d < 12) nextMode(now);
-      // steer: velocity eases toward the desired heading, so turns are smooth arcs
-      const k = mode === 'zip' ? 5 : 1.6;
-      vel.x += ((dx / (d || 1)) * speed - vel.x) * Math.min(1, dt * k);
-      vel.y += ((dy / (d || 1)) * speed - vel.y) * Math.min(1, dt * k);
-    } else if (mode === 'hover') {
-      vel.x += (-vel.x) * Math.min(1, dt * 3);
-      vel.y += (Math.sin(t * 2) * 12 - vel.y) * Math.min(1, dt * 3);
-    } else if (mode === 'loop') {
-      loopA += dt * 2.6;
-      const tx = loopC.x + Math.cos(loopA) * 70, ty = loopC.y + Math.sin(loopA) * 70;
-      vel.x = (tx - pos.x) / Math.max(dt, 0.016); vel.y = (ty - pos.y) / Math.max(dt, 0.016);
+    phaseT += dt;
+    const prev = { x: pos.x, y: pos.y };
+    if (phase === 'bob') {
+      // up and down in place, a slow sway sideways, beam on in the second half
+      pos.y = baseY + Math.sin(phaseT * 2.4) * 46 * Math.min(1, phaseT);
+      pos.x += Math.sin(phaseT * 0.9) * 12 * dt;
+      if (phaseT > BOB_TIME) begin('approach');
+    } else if (phase === 'approach') {
+      const q = pointAt(s), dx = q.x - pos.x, dy = q.y - pos.y, d = Math.hypot(dx, dy);
+      const step = Math.min(d, APPROACH_SPEED * dt);
+      if (d < 4) begin('lap');
+      else { pos.x += (dx / d) * step; pos.y += (dy / d) * step; }
+    } else if (phase === 'lap') {
+      // ease in and out of the lap so it never starts or stops with a jerk
+      const done = path.len - lapLeft;
+      const ease = Math.min(1, 0.25 + done / 500, 0.25 + lapLeft / 500);
+      const ds = LAP_SPEED * ease * dt;
+      s += ds; lapLeft -= ds;
+      const q = pointAt(s);
+      pos.x = q.x; pos.y = q.y;
+      if (lapLeft <= 0) begin('bob');
     }
-    pos.x = Math.min(maxX, Math.max(0, pos.x + vel.x * dt));
-    pos.y = Math.min(maxY, Math.max(minY, pos.y + vel.y * dt));
-    beam += ((mode === 'hover' ? 1 : 0) - beam) * Math.min(1, dt * 3);
-    const tilt = Math.max(-18, Math.min(18, vel.x / 14));
+    pos.x = Math.min(maxX, Math.max(0, pos.x));
+    vel.x += ((pos.x - prev.x) / Math.max(dt, 0.001) - vel.x) * Math.min(1, dt * 6);
+    vel.y += ((pos.y - prev.y) / Math.max(dt, 0.001) - vel.y) * Math.min(1, dt * 6);
+    const beamOn = phase === 'bob' && phaseT > BOB_TIME * 0.45 && phaseT < BOB_TIME - 0.4;
+    beam += ((beamOn ? 1 : 0) - beam) * Math.min(1, dt * 4);
+    const tilt = Math.max(-18, Math.min(18, vel.x / 20));
     const wobble = Math.sin(t * 2.3) * 4;
     canvas.style.transform = `translate(${Math.round(pos.x)}px, ${Math.round(pos.y + wobble)}px) rotate(${tilt.toFixed(1)}deg)`;
     drawSaucer(ctx, t, beam);
@@ -137,7 +178,6 @@ export function startUfo({ onMove } = {}) {
     canvas.style.transform = `translate(${maxX - 30}px, 90px)`;
     drawSaucer(ctx, 0, 0);
   } else {
-    nextMode(last);
     raf = requestAnimationFrame(frame);
   }
   return () => { stopped = true; cancelAnimationFrame(raf); canvas.remove(); };
