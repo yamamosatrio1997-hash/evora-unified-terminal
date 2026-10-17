@@ -4,7 +4,7 @@ import { live, onLive, watchCandles, errorText, canAskAccess, requestAccess, TV_
 import { heroScene, botAvatar } from '../pixel.js';
 
 const MONTH = 30 * 86400000;
-const ALLOC_COLORS = ['#ffc94d', '#9b7bff', '#33d6ff', '#3d8bff', '#22e39b', '#5f6c9c'];
+const ALLOC_COLORS = ['#ffd23b', '#b86bff', '#22f0ff', '#22c4ff', '#39ff88', '#52806a'];
 
 const KPIS = [
   { key: 'winRate', label: 'Win Rate', icon: 'winrate', c: 'var(--green)' },
@@ -149,8 +149,8 @@ export function mount(root) {
     chart.setData({
       x: p.map((q) => q.t),
       series: [
-        { key: 'target', label: 'Jalur target', values: p.map((q) => targetAt(q.t)), color: '#ffc94d', width: 1.5, dash: [5, 5], nextFn: targetAt },
-        { key: 'eq', label: 'Ekuitas', values: p.map((q) => q.v), color: '#22e39b', fill: true, width: 2.2, live: true, glow: true },
+        { key: 'target', label: 'Jalur target', values: p.map((q) => targetAt(q.t)), color: '#ffd23b', width: 1.5, dash: [5, 5], nextFn: targetAt },
+        { key: 'eq', label: 'Ekuitas', values: p.map((q) => q.v), color: '#39ff88', fill: true, width: 2.2, live: true, glow: true },
       ],
     });
     if (r === '1D' && !sparkSeeded) { sparkSeeded = true; sparkVals = [...p.slice(-40).map((q) => q.v), ...sparkVals].slice(-40); }
@@ -266,9 +266,9 @@ export function mount(root) {
   function renderLevels() {
     const ps = (lastSnap?.positions || []).filter((p) => p.pair === livePair);
     candle.setLevels(ps.flatMap((p) => [
-      { price: p.entry, color: '#ffc94d', label: `${p.botName} ${p.side} entry` },
-      { price: p.sl, color: '#ff5c7a', label: p.tp1Hit ? 'stop (BE)' : 'SL', dash: [2, 3] },
-      { price: p.tp2, color: '#22e39b', label: 'TP2', dash: [2, 3] },
+      { price: p.entry, color: '#ffd23b', label: `${p.botName} ${p.side} entry` },
+      { price: p.sl, color: '#ff3d6e', label: p.tp1Hit ? 'stop (BE)' : 'SL', dash: [2, 3] },
+      { price: p.tp2, color: '#39ff88', label: 'TP2', dash: [2, 3] },
     ]));
     ref.liveNote.textContent = ps.length
       ? `Garis = ${ps.length} posisi paper di ${livePair}. Harga simulasi bot ditambatkan ke harga TradingView.`
@@ -314,7 +314,7 @@ export function mount(root) {
 
     sparkVals.push(a.equity);
     if (sparkVals.length > 40) sparkVals.shift();
-    sparkline(ref.spark, sparkVals, sparkVals.at(-1) >= sparkVals[0] ? '#22e39b' : '#ff5c7a');
+    sparkline(ref.spark, sparkVals, sparkVals.at(-1) >= sparkVals[0] ? '#39ff88' : '#ff3d6e');
 
     if (series) chart.setLast('eq', a.equity, Math.floor(s.t / series.step) * series.step);
 

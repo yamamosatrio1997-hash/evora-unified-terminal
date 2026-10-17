@@ -70,7 +70,7 @@ export function mount(root) {
     const chrono = [...ts].reverse();
     let acc = 0;
     const vals = chrono.map((t) => (acc += t.r));
-    if (vals.length >= 2) cum.setData({ x: vals.map((_, i) => i + 1), series: [{ key: 'r', label: 'R kumulatif', values: vals, color: acc >= 0 ? '#22e39b' : '#ff5c7a', fill: true, width: 2 }] });
+    if (vals.length >= 2) cum.setData({ x: vals.map((_, i) => i + 1), series: [{ key: 'r', label: 'R kumulatif', values: vals, color: acc >= 0 ? '#39ff88' : '#ff3d6e', fill: true, width: 2 }] });
 
     const bins = Array(14).fill(0);
     for (const t of ts) bins[Math.max(0, Math.min(13, Math.floor((t.r + 1.5) / 0.25)))]++;
@@ -79,7 +79,7 @@ export function mount(root) {
     [...ref.hist.children].forEach((el, i) => {
       const lo = -1.5 + i * 0.25;
       el.style.height = `${(bins[i] / max) * 100}%`;
-      el.style.setProperty('--c', lo < 0 ? 'linear-gradient(180deg,#ff5c7a,#ff5c7a55)' : 'linear-gradient(180deg,#22e39b,#22e39b55)');
+      el.style.setProperty('--c', lo < 0 ? 'linear-gradient(180deg,#ff3d6e,#ff3d6e55)' : 'linear-gradient(180deg,#39ff88,#39ff8855)');
       el.dataset.tip = `${lo.toFixed(2)}…${(lo + 0.25).toFixed(2)}R: ${bins[i]}`;
     });
 

@@ -33,8 +33,8 @@ export function mount(root) {
       calib.setData({
         x: b.map((q) => (q.lo + q.hi) / 2),
         series: [
-          { key: 'ideal', label: 'Ideal', values: b.map((q) => q.predicted), color: '#ffc94d', dash: [5, 5], width: 1.5 },
-          { key: 'act', label: 'Aktual', values: b.map((q) => q.actual), color: '#33d6ff', width: 2.4, fill: true },
+          { key: 'ideal', label: 'Ideal', values: b.map((q) => q.predicted), color: '#ffd23b', dash: [5, 5], width: 1.5 },
+          { key: 'act', label: 'Aktual', values: b.map((q) => q.actual), color: '#22f0ff', width: 2.4, fill: true },
         ],
       });
       const ece = b.reduce((a, q) => a + Math.abs(q.actual - q.predicted) * q.n, 0) / b.reduce((a, q) => a + q.n, 0);

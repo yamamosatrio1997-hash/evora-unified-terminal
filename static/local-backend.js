@@ -25,7 +25,7 @@ const ready = (async () => {
     banner('');
   } catch (err) {
     engine = new Engine({ now: Date.now() });
-    const why = err?.code === 'unavailable' ? 'TradingView tidak tersedia di tampilan ini' : errorText(err);
+    const why = err?.code === 'unavailable' ? 'TradingView tidak tersedia di tampilan ini.' : errorText(err);
     banner(`${why} Menampilkan data simulasi.`, 'warn');
     setTimeout(() => banner(''), 9000);
   }

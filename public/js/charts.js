@@ -136,7 +136,7 @@ export class LineChart {
     const { min, max } = this.dom;
     const X = (i) => pad.l + (i / (n - 1)) * iw;
     const Y = (v) => pad.t + (1 - (v - min) / (max - min || 1)) * ih;
-    const grid = css('--grid') || 'rgba(120,140,220,.12)';
+    const grid = css('--grid') || 'rgba(90,200,140,.12)';
     const label = css('--dim') || '#5d6a99';
 
     // grid + y labels
@@ -155,7 +155,7 @@ export class LineChart {
     }
     ctx.setLineDash([]);
     if (this.o.zeroLine && min < 0 && max > 0) {
-      ctx.strokeStyle = 'rgba(200,210,255,.25)';
+      ctx.strokeStyle = 'rgba(190,255,215,.25)';
       ctx.beginPath(); ctx.moveTo(pad.l, Y(0)); ctx.lineTo(w - pad.r, Y(0)); ctx.stroke();
     }
     // x labels
@@ -216,7 +216,7 @@ export class LineChart {
         ctx.fillStyle = hexA(s.color, 0.35 * (1 - t)); ctx.fill();
         ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2);
         ctx.fillStyle = s.color; ctx.fill();
-        ctx.strokeStyle = '#0b1433'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = '#04100a'; ctx.lineWidth = 1.5; ctx.stroke();
       }
     }
 
@@ -224,7 +224,7 @@ export class LineChart {
     if (this.hover && this.hover.x >= pad.l && this.hover.x <= w - pad.r) {
       const i = Math.round(((this.hover.x - pad.l) / iw) * (n - 1));
       const x = X(i);
-      ctx.strokeStyle = 'rgba(200,210,255,.35)';
+      ctx.strokeStyle = 'rgba(190,255,215,.35)';
       ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ih); ctx.stroke();
       ctx.setLineDash([]);
@@ -257,7 +257,7 @@ export class Donut {
     this.svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
     this.svg.classList.add('donut');
     const track = document.createElementNS(ns, 'circle');
-    Object.entries({ cx: size / 2, cy: size / 2, r: this.r, fill: 'none', stroke: 'rgba(120,140,220,.12)', 'stroke-width': stroke }).forEach(([k, v]) => track.setAttribute(k, v));
+    Object.entries({ cx: size / 2, cy: size / 2, r: this.r, fill: 'none', stroke: 'rgba(90,200,140,.12)', 'stroke-width': stroke }).forEach(([k, v]) => track.setAttribute(k, v));
     this.svg.append(track);
     this.g = document.createElementNS(ns, 'g');
     this.g.setAttribute('transform', `rotate(-90 ${size / 2} ${size / 2})`);
@@ -397,12 +397,12 @@ export class CandleChart {
     const slot = iw / n;
     const X = (i) => pad.l + slot * (i + 0.5);
     const Y = (v) => pad.t + (1 - (v - min) / (max - min || 1)) * ih;
-    const dim = css('--dim') || '#5f6c9c';
-    const up = css('--green') || '#22e39b', down = css('--red') || '#ff5c7a';
+    const dim = css('--dim') || '#52806a';
+    const up = css('--green') || '#39ff88', down = css('--red') || '#ff3d6e';
 
     ctx.font = '11px "JetBrains Mono", monospace';
     ctx.fillStyle = dim; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.strokeStyle = css('--grid') || 'rgba(120,140,220,.12)';
+    ctx.strokeStyle = css('--grid') || 'rgba(90,200,140,.12)';
     ctx.setLineDash([2, 4]);
     const step = niceStep(max - min, 5);
     for (let v = Math.ceil(min / step) * step; v <= max; v += step) {
@@ -447,7 +447,7 @@ export class CandleChart {
       ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = col;
       ctx.fillRect(w - pad.r + 2, y - 9, pad.r - 4, 18);
-      ctx.fillStyle = '#06101f'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#021007'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText(this.o.priceFormat(last.c), w - pad.r + 6, y);
       const t = (performance.now() % 1600) / 1600;
       ctx.beginPath(); ctx.arc(X(n - 1), y, 3 + t * 9, 0, Math.PI * 2);
@@ -457,7 +457,7 @@ export class CandleChart {
     if (this.hover && this.hover.x >= pad.l && this.hover.x <= w - pad.r) {
       const i = Math.max(0, Math.min(n - 1, Math.floor((this.hover.x - pad.l) / slot)));
       const b = bars[i];
-      ctx.strokeStyle = 'rgba(200,210,255,.35)'; ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = 'rgba(190,255,215,.35)'; ctx.setLineDash([3, 3]);
       ctx.beginPath(); ctx.moveTo(X(i), pad.t); ctx.lineTo(X(i), pad.t + ih); ctx.stroke(); ctx.setLineDash([]);
       const f = this.o.priceFormat;
       this.tip.innerHTML = `<span>${this.o.tipTime ? this.o.tipTime(b.t) : this.o.timeFormat(b.t)}</span>

@@ -135,7 +135,7 @@ export function stagger(root) {
   });
 }
 
-export const COIN_COLORS = { BTC: '#f7931a', ETH: '#8b8cf8', SOL: '#2dd4bf', ARB: '#3b82f6', XRP: '#cbd5e1', BNB: '#facc15', DOGE: '#d6b25e', AVAX: '#f43f5e', Lainnya: '#5f6c9c' };
+export const COIN_COLORS = { BTC: '#f7931a', ETH: '#8b8cf8', SOL: '#2dd4bf', ARB: '#3b82f6', XRP: '#cbd5e1', BNB: '#facc15', DOGE: '#d6b25e', AVAX: '#f43f5e', Lainnya: '#52806a' };
 
 export function coin(pair) {
   const base = pair.split('/')[0];

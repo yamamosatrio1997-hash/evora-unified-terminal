@@ -35,7 +35,7 @@ export function mount(root) {
     if (!show) { el.replaceChildren(); return; }
     if (el.firstChild) return;
     const cv = h('canvas', { class: 'pixel', width: 12, height: 11 });
-    botAvatar(cv, '#5f6c9c');
+    botAvatar(cv, '#52806a');
     el.replaceChildren(h('div', { class: 'empty' }, cv, text));
   }
 

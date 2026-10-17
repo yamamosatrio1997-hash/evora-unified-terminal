@@ -9,7 +9,7 @@ export function mount(root) {
     <p>Vonis: edge arah 4H sangat tipis. Volatilitas lebih bisa diprediksi daripada arah, jadi model dipakai untuk rentang harga dan ukuran stop, bukan untuk menebak naik/turun.</p></div></div>
   <div class="grid">
     <section class="card span-8"><header class="card-head"><div><h3>Monte Carlo ekuitas 30 hari</h3><div class="sub" data-ref="mcSub">bootstrap R dari 300 trade terakhir</div></div></header>
-      <div class="legend"><span><i style="background:rgba(61,139,255,.35)"></i>5–95%</span><span><i style="background:rgba(61,139,255,.6)"></i>25–75%</span><span><i style="background:#22e39b"></i>Median</span><span><i class="dash"></i>+$1.000</span></div>
+      <div class="legend"><span><i style="background:rgba(34,240,255,.35)"></i>5–95%</span><span><i style="background:rgba(34,240,255,.6)"></i>25–75%</span><span><i style="background:#39ff88"></i>Median</span><span><i class="dash"></i>+$1.000</span></div>
       <div class="chart" data-ref="mc" style="height:280px"></div></section>
     <section class="span-4" style="display:grid;gap:16px">
       <div class="card prob-ring"><small class="muted">P(≥ +$1.000 dalam 30 hari)</small><b data-ref="pTarget">—</b><div class="note">simulasi, bukan hasil aktual</div></div>
@@ -48,12 +48,12 @@ export function mount(root) {
     mc.setData({
       x: b.map((q) => q.d),
       bands: [
-        { lo: b.map((q) => q.p5), hi: b.map((q) => q.p95), color: 'rgba(61,139,255,.16)', label: '5–95%', swatch: 'rgba(61,139,255,.4)' },
-        { lo: b.map((q) => q.p25), hi: b.map((q) => q.p75), color: 'rgba(61,139,255,.28)', label: '25–75%', swatch: 'rgba(61,139,255,.7)' },
+        { lo: b.map((q) => q.p5), hi: b.map((q) => q.p95), color: 'rgba(34,240,255,.16)', label: '5–95%', swatch: 'rgba(34,240,255,.4)' },
+        { lo: b.map((q) => q.p25), hi: b.map((q) => q.p75), color: 'rgba(34,240,255,.28)', label: '25–75%', swatch: 'rgba(34,240,255,.7)' },
       ],
       series: [
-        { key: 'tgt', values: b.map(() => d.eq0 + 1000), color: '#ffc94d', dash: [5, 5], width: 1.4, label: 'Target' },
-        { key: 'p50', values: b.map((q) => q.p50), color: '#22e39b', width: 2.4, label: 'Median', glow: true },
+        { key: 'tgt', values: b.map(() => d.eq0 + 1000), color: '#ffd23b', dash: [5, 5], width: 1.4, label: 'Target' },
+        { key: 'p50', values: b.map((q) => q.p50), color: '#39ff88', width: 2.4, label: 'Median', glow: true },
       ],
     });
     ref.mcSub.textContent = `${d.paths} jalur · ${d.perDay.toFixed(1)} trade/hari · bootstrap R dari 300 trade terakhir`;

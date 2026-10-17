@@ -7,8 +7,8 @@ const COLS = TFS.flatMap((tf) => EXITS.flatMap((exit) => DIRS.map((dir) => ({ tf
 
 function heatColor(r) {
   const t = Math.max(-1, Math.min(1, r / 0.22));
-  if (t >= 0) return `rgba(34,227,155,${0.15 + t * 0.85})`;
-  return `rgba(255,92,122,${0.15 + -t * 0.85})`;
+  if (t >= 0) return `rgba(57,255,136,${0.15 + t * 0.85})`;
+  return `rgba(255,61,110,${0.15 + -t * 0.85})`;
 }
 
 export function mount(root) {
@@ -65,7 +65,7 @@ export function mount(root) {
     const rows = data.strategies.map((s, si) => {
       const cells = COLS.map((col) => {
         const c = s.cells.find((x) => x.tf === col.tf && x.exit === col.exit && x.dir === col.dir);
-        if (!c) return h('div', { class: 'cell', style: 'background:transparent;cursor:default;box-shadow:inset 0 0 0 1px rgba(120,140,220,.08)' });
+        if (!c) return h('div', { class: 'cell', style: 'background:transparent;cursor:default;box-shadow:inset 0 0 0 1px rgba(90,200,140,.08)' });
         const dim = (filter.status && c.status !== filter.status) || (filter.tf && c.tf !== filter.tf);
         const el = h('div', { class: `cell${c.active ? ' active' : ''}${dim ? ' dimmed' : ''}`, style: `background:${heatColor(c.avgR)};opacity:0;transition:opacity .4s ${(si * 20 + COLS.indexOf(col) * 6)}ms, transform .15s` });
         el.addEventListener('mouseenter', () => {
