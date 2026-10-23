@@ -42,4 +42,4 @@ jobs:
         run: |
           docker run --rm -v $PWD/n8n/workflows:/wf:ro -e N8N_ENCRYPTION_KEY=ci-only-key-not-secret \
             -e N8N_DIAGNOSTICS_ENABLED=false --entrypoint sh n8nio/n8n:2.44.6 \
-            -c "n8n import:workflow --separate --input=/wf | tee /tmp/out && grep -q 'Successfully imported 7 workflows' /tmp/out"
+            -c "n8n import:workflow --separate --input=/wf | tee /tmp/out && grep -q 'Successfully imported 8 workflows' /tmp/out"

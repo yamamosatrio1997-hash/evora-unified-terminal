@@ -43,6 +43,34 @@ from app.security.ratelimit import RateLimiter
 from app.services import queries
 
 router = APIRouter(prefix="/api")
+
+# Strategy internals (parameters, search grids, prompt versions) and private data
+# (exchange balances, Telegram user ids) are visible to admins only. Enforced here,
+# server-side, not just hidden in the UI.
+STRATEGY_HIDDEN = "hidden"
+
+
+def is_admin(p: Any) -> bool:
+    return getattr(p, "role", None) == "admin"
+
+
+def mask_id(v: Any) -> str:
+    s_ = str(v)
+    return "•••" + s_[-3:] if len(s_) > 3 else "•••"
+
+
+def redact_backtest(d: dict[str, Any]) -> dict[str, Any]:
+    r = d.get("results") or {}
+    split = r.get("split")
+    if split:
+        split["selected_params"] = STRATEGY_HIDDEN
+        split.pop("_grid_scores", None)
+    for f in (r.get("walk_forward") or {}).get("folds", []):
+        f["params"] = STRATEGY_HIDDEN
+    if r.get("default_params_full_period"):
+        r["default_params_full_period"].pop("trades", None)
+    d.pop("assumptions", None)
+    return d
 _login_limiter = RateLimiter(10, 300)
 
 
@@ -66,6 +94,50 @@ def login(body: LoginIn, response: Response, db: DB) -> dict[str, Any]:
     response.set_cookie(COOKIE_NAME, token, httponly=True, secure=s.cookie_secure, samesite="strict",
                         max_age=s.session_ttl_hours * 3600, path="/")
     audit(db, f"user:{user.username}", "auth.login")
+    return {"username": user.username, "role": user.role}
+
+
+_signup_limiter: RateLimiter | None = None
+USERNAME_RE = r"^[a-zA-Z0-9_.-]{3,32}$"
+EMAIL_RE = r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$"
+
+
+class RegisterIn(BaseModel):
+    username: str = Field(pattern=USERNAME_RE)
+    email: str = Field(max_length=254, pattern=EMAIL_RE)
+    password: str = Field(min_length=12, max_length=256)
+    accept_terms: bool
+
+
+@router.post("/auth/register", status_code=201)
+def register(body: RegisterIn, request: Request, response: Response, db: DB) -> dict[str, Any]:
+    """Self-registration. New accounts are read-only viewers; roles are raised by an admin."""
+    global _signup_limiter
+    s = get_settings()
+    if not s.allow_signup:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "registration is closed")
+    if not body.accept_terms:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "terms and risk disclosure must be accepted")
+    _signup_limiter = _signup_limiter or RateLimiter(s.signup_rate_limit_per_hour, 3600)
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0].strip()
+    if not _signup_limiter.allow(ip):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many registrations; try later")
+    if body.password.lower() in (body.username.lower(), body.email.lower()):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "password must differ from username and email")
+    email = body.email.strip().lower()
+    taken = db.scalar(select(User.id).where((func.lower(User.username) == body.username.lower()) | (User.email == email)))
+    if taken:
+        # Same message for both cases so the endpoint cannot enumerate registered emails.
+        raise HTTPException(status.HTTP_409_CONFLICT, "username or email is not available")
+    from app.security.passwords import hash_password
+
+    user = User(username=body.username, email=email, password_hash=hash_password(body.password), role="viewer")
+    db.add(user)
+    db.flush()
+    token = create_session(db, user)
+    response.set_cookie(COOKIE_NAME, token, httponly=True, secure=s.cookie_secure, samesite="strict",
+                        max_age=s.session_ttl_hours * 3600, path="/")
+    audit(db, f"user:{user.username}", "auth.register", None, {"role": "viewer"})
     return {"username": user.username, "role": user.role}
 
 
@@ -188,7 +260,11 @@ def agents(db: DB, p: Viewer) -> list[dict[str, Any]]:
 def agent_detail(role: str, db: DB, p: Viewer) -> dict[str, Any]:
     if role not in AGENT_NAMES:
         raise HTTPException(404, "unknown agent")
-    return {"role": role, "name": AGENT_NAMES[role], "history": queries.agent_history(db, role)}
+    hist = queries.agent_history(db, role)
+    if not is_admin(p):
+        for h in hist:
+            h["output"].pop("prompt_version", None)
+    return {"role": role, "name": AGENT_NAMES[role], "history": hist}
 
 
 # ------------------------------------------------------------------ debates
@@ -203,6 +279,10 @@ def debate(session_id: uuid.UUID, db: DB, p: Viewer) -> dict[str, Any]:
     d = queries.debate_detail(db, session_id)
     if d is None:
         raise HTTPException(404, "not found")
+    if not is_admin(p):
+        for a in d["analyses"]:
+            a["output"].pop("prompt_version", None)
+        d["session"].pop("config", None)
     return d
 
 
@@ -210,7 +290,8 @@ def debate(session_id: uuid.UUID, db: DB, p: Viewer) -> dict[str, Any]:
 
 @router.get("/quant/strategies")
 def strategies(p: Viewer) -> list[dict[str, Any]]:
-    return [{"name": s.name, "description": s.description, "defaults": s.defaults, "grid": s.grid} for s in STRATEGIES.values()]
+    return [{"name": s.name, "description": s.description,
+             **({"defaults": s.defaults, "grid": s.grid} if is_admin(p) else {})} for s in STRATEGIES.values()]
 
 
 @router.get("/quant/backtests")
@@ -223,7 +304,8 @@ def backtest(run_id: uuid.UUID, db: DB, p: Viewer) -> dict[str, Any]:
     r = db.get(BacktestRun, run_id)
     if r is None:
         raise HTTPException(404, "not found")
-    return summarize_run(r, full=True)
+    out = summarize_run(r, full=True)
+    return out if is_admin(p) else redact_backtest(out)
 
 
 class BacktestIn(BaseModel):
@@ -244,7 +326,8 @@ def create_backtest(body: BacktestIn, db: DB, p: Operator) -> dict[str, Any]:
     run = run_backtest_job(db, body.strategy, body.symbol.upper(), body.interval,
                            costs=CostModel(body.taker_fee_bps, body.slippage_bps, body.funding_rate_per_8h))
     audit(db, p.actor, "quant.backtest", str(run.id), body.model_dump())
-    return summarize_run(run, full=True)
+    out = summarize_run(run, full=True)
+    return out if is_admin(p) else redact_backtest(out)
 
 
 # ------------------------------------------------------------------ risk
@@ -393,7 +476,7 @@ def telegram_status(db: DB, p: Viewer) -> dict[str, Any]:
         "webhook_secret_configured": bool(s.telegram_webhook_secret.get_secret_value()),
         "authorized_users_configured": len(s.telegram_allowlist),
         "rate_limit_per_minute": s.telegram_rate_limit_per_minute,
-        "requests": [{"id": r.id, "created_at": r.created_at.isoformat(), "user_id": r.user_id if r.authorized else "unauthorized",
+        "requests": [{"id": r.id, "created_at": r.created_at.isoformat(), "user_id": mask_id(r.user_id) if r.authorized else "unauthorized",
                       "authorized": r.authorized, "intent": r.intent, "status": r.status, "latency_ms": r.latency_ms, "error": r.error}
                      for r in reqs],
         "deliveries": [{"created_at": n.created_at.isoformat(), "kind": n.kind, "status": n.status, "error": n.error} for n in notes],
@@ -402,7 +485,13 @@ def telegram_status(db: DB, p: Viewer) -> dict[str, Any]:
 
 @router.get("/mexc/status")
 def mexc_status(db: DB, p: Viewer) -> dict[str, Any]:
-    return mexc.status(db)
+    st = mexc.status(db)
+    if not is_admin(p):  # balances and positions are private account data
+        for v in st["snapshots"].values():
+            if v.get("payload") is not None:
+                v["payload"] = None
+                v["payload_hidden"] = True
+    return st
 
 
 @router.post("/mexc/sync")
@@ -431,7 +520,7 @@ def settings_view(db: DB, p: Viewer) -> dict[str, Any]:
     row = db.get(AppSetting, AGENT_SETTINGS_KEY)
     prompts = {name: load_prompt(name)[0] for name in ("common", "macro", "fundamental", "onchain", "flow", "critic", "fund_manager", "reply")}
     usage = db.execute(select(func.coalesce(func.sum(LlmCall.tokens_in + LlmCall.tokens_out), 0), func.coalesce(func.sum(LlmCall.cost_usd), 0))).one()
-    return {
+    out = {
         "environment": s.app_env,
         "mode": "PAPER",
         "live_trading_enabled": s.live_trading_enabled,
@@ -450,6 +539,10 @@ def settings_view(db: DB, p: Viewer) -> dict[str, Any]:
         "agents": row.value if row else {"enabled": {r: True for r in AGENT_NAMES}, "schedules": {}},
         "note": "Secrets and risk limits are set via server environment only and are never returned to the browser.",
     }
+    if not is_admin(p):
+        public = ("environment", "mode", "live_trading_enabled", "debate_rounds", "risk", "agents", "note")
+        out = {k: v for k, v in out.items() if k in public}
+    return out
 
 
 @router.put("/settings/agents")

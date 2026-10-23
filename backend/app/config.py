@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     admin_bootstrap_user: str = "admin"
     admin_bootstrap_password: SecretStr = SecretStr("")
     cors_origins: str = ""
+    # Public self-registration creates read-only "viewer" accounts.
+    allow_signup: bool = True
+    signup_rate_limit_per_hour: int = 5
 
     # Token n8n uses to call backend service endpoints. Never sent to browsers.
     service_token: SecretStr = SecretStr("")

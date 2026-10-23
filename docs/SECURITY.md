@@ -16,6 +16,9 @@ Status legend: ✅ implemented and tested · ☑️ implemented, not covered by 
 - ✅ Roles: `viewer` < `operator` < `admin`. Operators can engage the emergency stop; only admins can release it, edit agent settings or read the audit log.
 - ✅ Passwords use scrypt (N=2^14, r=8, p=1) with a minimum length of 12. Login is rate-limited (10 attempts per 5 minutes per username).
 - ✅ n8n-to-backend calls use a bearer service token compared in constant time.
+- ✅ Self-registration (`/api/auth/register`) always creates `viewer` accounts. It requires accepting the risk terms, enforces a 12-character minimum and a password different from the username/email, is rate-limited per IP (default 5/hour), and returns the same error for a taken username or a taken email (no enumeration). It can be closed with `ALLOW_SIGNUP=false`.
+- ✅ Role-based redaction, server-side: non-admins do not receive strategy parameters/grids, walk-forward parameters, backtest assumptions, prompt versions, LLM/secret configuration, or MEXC balances. Telegram user IDs are masked (`•••123`) for everyone. Tested in `test_strategy_internals_hidden_from_non_admin` and `test_telegram_ids_masked`.
+- ⚠️ No email verification or password reset yet (no mail service configured). Add both before opening signups widely; until then consider `ALLOW_SIGNUP=false` plus admin-created accounts.
 - ✅ Telegram: allowlist checked **before** any data access (tested with a handler that fails if it runs); webhook secret header verified in constant time; per-user rate limit; deduplication on `update_id`; context keyed by user id.
 - ⚠️ The in-process rate limiters are per worker (2 workers means the effective limit is up to 2x). Move them to Postgres or Redis if you scale out.
 
@@ -31,7 +34,7 @@ Status legend: ✅ implemented and tested · ☑️ implemented, not covered by 
 
 ## Transport and headers
 - ✅ API responses set CSP `default-src 'none'`, X-Frame-Options DENY, nosniff, no-referrer, a restrictive Permissions-Policy and `Cache-Control: no-store`, plus HSTS when `COOKIE_SECURE`.
-- ✅ The SPA (nginx) sets CSP `script-src 'self'` with no inline scripts. Inline styles are allowed because React Flow and Framer Motion use style attributes.
+- ✅ The SPA (nginx) sets CSP `script-src 'self'` with no inline scripts. Vite asset inlining is disabled so fonts and images load from `'self'` (no `data:` exception). Inline styles are allowed because React Flow and Framer Motion use style attributes.
 - ✅ Postgres sits on an `internal: true` Docker network. The n8n editor binds to 127.0.0.1. The OpenAPI docs are disabled in production.
 - ⚠️ TLS: use the `tls` compose profile or your own proxy. Do not expose port 8080 publicly over plain HTTP.
 

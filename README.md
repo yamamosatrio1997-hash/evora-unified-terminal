@@ -16,12 +16,40 @@ DATA SOURCES -> VALIDATION -> SPECIALIZED AGENTS -> DEBATE -> QUANT VALIDATION -
 | MEXC | Read-only client; execution adapter refuses submission | `backend/app/exchange/` |
 | Deployment | Docker Compose, nginx, optional Caddy TLS | `docker-compose.yml`, `deploy/` |
 
+## Product surfaces
+
+- **Public homepage** (`/`, Indonesian): animated pixel-art trading floor, team of nine mascots, how-it-works, risk-first and Telegram sections, FAQ, and a risk disclaimer. The hero animation is a scripted illustration and is labelled as such. No performance or profit claims appear anywhere.
+- **Sign up / log in** (`/signup`, `/login`): self-registration creates read-only **viewer** accounts (scrypt-hashed password, HttpOnly session cookie, rate-limited, no account enumeration). Turn it off with `ALLOW_SIGNUP=false`.
+- **Dashboard** (`/app/*`): the 12 operational pages. Agent Network opens on a **live trading floor** where a mascot moves only when the backend emits an event for that agent.
+
+### The nine agents
+
+All nine share one 16-bit silhouette (so blinking and bobbing animate identically) and differ only by colour. Standalone SVGs live in `frontend/public/mascots/` (`sheet.svg` shows the full set).
+
+| Mascot | Role | Colour |
+|---|---|---|
+| Atlas | Macro Analyst | `#FACC15` |
+| Sage | Fundamental Analyst | `#A3E635` |
+| Cipher | On-Chain Analyst | `#C084FC` |
+| Vortex | Whale & Market-Flow Analyst | `#22D3EE` |
+| Chronos | Technical Analyst | `#3B82F6` |
+| Alpha | Quant Researcher | `#F472B6` |
+| Sentinel | Risk Manager (veto) | `#34D399` |
+| Killjoy | Critical Reviewer | `#F87171` |
+| Odin | Fund Manager | `#FB923C` |
+
+Marketing videos of the animated floor (one full debate cycle, about 22 s, 30 fps) are in `docs/marketing/`, in 4:5 (feed) and 16:9 (web) formats. They show the illustration, not market data.
+
+### What each role can see
+
+Viewers (including all self-registered users) see research outputs, debates, paper results and risk decisions. They do **not** receive strategy parameters, search grids, prompt versions, LLM/secret configuration, MEXC balances or Telegram user IDs. Those are removed server-side, not just hidden in the UI. Telegram IDs are masked for everyone.
+
 ## Quick start (local)
 
 ```bash
 cp .env.example .env            # fill in every "change-me" (openssl rand -hex 32)
 docker compose up -d --build
-open http://127.0.0.1:8080      # log in with ADMIN_BOOTSTRAP_USER / ADMIN_BOOTSTRAP_PASSWORD
+open http://127.0.0.1:8080      # homepage; /login with ADMIN_BOOTSTRAP_USER / ADMIN_BOOTSTRAP_PASSWORD
 ```
 
 Then import the n8n workflows and credential as described in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#n8n).

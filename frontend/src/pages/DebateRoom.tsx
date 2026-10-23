@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Me } from "../App";
+import { AGENTS, BY_ROLE, Mascot } from "../components/Mascot";
 import { Card, Claims, DataTag, DecisionBadge, Empty, ErrorNote, Kv, StatusBadge } from "../components/ui";
 import { api } from "../lib/api";
 import { useEvents } from "../lib/events";
@@ -12,10 +13,7 @@ const ROUND_NAMES: Record<number, string> = {
   1: "Independent research", 2: "Evidence exchange", 3: "Challenge / counterargument", 4: "Cross-domain synthesis",
   5: "Quant validation", 6: "Independent risk review", 7: "Fund Manager decision", 8: "Audit & persistence",
 };
-const AGENT: Record<string, string> = {
-  macro: "Macro", fundamental: "Fundamental", onchain: "On-Chain", flow: "Whale/Flow", technical: "Technical",
-  quant: "Quant", risk: "Risk Manager", critic: "Critical Reviewer", fund_manager: "Fund Manager",
-};
+const AGENT: Record<string, string> = Object.fromEntries(AGENTS.map((a) => [a.role, a.name]));
 
 export default function DebateRoom({ me }: { me: Me }) {
   const [params, setParams] = useSearchParams();
@@ -123,7 +121,8 @@ export default function DebateRoom({ me }: { me: Me }) {
                       {msgs.map((m) => (
                         <div key={m.id} className={`tl-item ${m.kind}`} id={`m${m.id}`}>
                           <div className="row" style={{ gap: 6 }}>
-                            <strong style={{ fontSize: 12.5 }}>{AGENT[m.from] ?? m.from}</strong>
+                            <Mascot role={m.from} size={18} />
+                            <strong style={{ fontSize: 12.5, color: BY_ROLE[m.from]?.color }}>{AGENT[m.from] ?? m.from}</strong>
                             {m.to && <span className="faint" style={{ fontSize: 12 }}>→ {AGENT[m.to] ?? m.to}</span>}
                             <span className="badge" style={{ fontSize: 9.5 }}>{m.kind.replace("_", " ")}</span>
                             {m.reply_to && <a href={`#m${m.reply_to}`} className="mono" style={{ fontSize: 10.5 }}>re #{m.reply_to}</a>}
@@ -140,12 +139,12 @@ export default function DebateRoom({ me }: { me: Me }) {
             ) : (
               <div className="grid g2">
                 {d.analyses.map((a) => (
-                  <Card key={`${a.role}-${a.round}`} title={`R${a.round} · ${AGENT[a.role]}`} right={<><StatusBadge value={a.status} /><StatusBadge value={a.output.stance} /></>}>
+                  <Card key={`${a.role}-${a.round}`} title={<span className="row" style={{ gap: 6 }}><Mascot role={a.role} size={18} />R{a.round} · {AGENT[a.role]} · {BY_ROLE[a.role]?.title}</span>} right={<><StatusBadge value={a.status} /><StatusBadge value={a.output.stance} /></>}>
                     <p style={{ marginTop: 0, fontSize: 13 }}>{a.output.conclusion}</p>
                     <div className="stat-label">Supporting</div><Claims items={a.output.supporting_evidence} refs={a.output.source_references} />
                     <div className="stat-label" style={{ marginTop: 8 }}>Opposing</div><Claims items={a.output.opposing_evidence} refs={a.output.source_references} />
                     {a.output.missing_data.length > 0 && <div className="faint" style={{ fontSize: 11.5, marginTop: 8 }}>Missing: {a.output.missing_data.join("; ")}</div>}
-                    <div className="faint mono" style={{ fontSize: 10.5, marginTop: 8 }}>{a.output.prompt_version}{a.output.llm_used ? ` · ${a.output.model}` : " · deterministic"}</div>
+                    <div className="faint mono" style={{ fontSize: 10.5, marginTop: 8 }}>{a.output.prompt_version ?? ""}{a.output.llm_used ? ` · ${a.output.model}` : " · deterministic"}</div>
                   </Card>
                 ))}
               </div>

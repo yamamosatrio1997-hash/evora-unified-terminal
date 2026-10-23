@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { api, ApiError } from "./lib/api";
+import { api } from "./lib/api";
 import { EventsProvider, useEvents } from "./lib/events";
 import CommandCenter from "./pages/CommandCenter";
 import MarketIntel from "./pages/MarketIntel";
@@ -12,6 +12,9 @@ import RiskCenter from "./pages/RiskCenter";
 import { DataMonitor, MexcPage, N8nCenter, TelegramControl } from "./pages/Operations";
 import PaperTerminal from "./pages/PaperTerminal";
 import SettingsPage from "./pages/Settings";
+import Landing from "./pages/public/Landing";
+import { LoginPage, SignupPage, TermsPage } from "./pages/public/Auth";
+import { Mascot } from "./components/Mascot";
 
 export interface Me { username: string; role: string }
 
@@ -30,44 +33,6 @@ const PAGES = [
   { path: "/settings", label: "Settings", el: SettingsPage },
 ] as const;
 
-function Login({ onLogin }: { onLogin: (m: Me) => void }) {
-  const [u, setU] = useState("");
-  const [p, setP] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    try {
-      onLogin(await api.post<Me>("/auth/login", { username: u, password: p }));
-    } catch (e) {
-      setErr(e instanceof ApiError && e.status === 429 ? "Too many attempts; wait a few minutes." : "Invalid credentials.");
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div style={{ display: "grid", placeItems: "center", minHeight: "100%", padding: 16, position: "relative", zIndex: 1 }}>
-      <motion.form onSubmit={submit} className="card" style={{ width: 360, padding: 26 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="brand" style={{ padding: "0 0 18px" }}>
-          <div className="brand-mark" />
-          <div>
-            <div className="brand-title">AI Trading Command Center</div>
-            <div className="brand-sub">Research · Paper mode</div>
-          </div>
-        </div>
-        <label className="field">Username<input autoComplete="username" value={u} onChange={(e) => setU(e.target.value)} required /></label>
-        <div style={{ height: 10 }} />
-        <label className="field">Password<input type="password" autoComplete="current-password" value={p} onChange={(e) => setP(e.target.value)} required /></label>
-        {err && <div className="notice bad" style={{ marginTop: 12 }}>{err}</div>}
-        <button className="btn primary" style={{ width: "100%", justifyContent: "center", marginTop: 16 }} disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-        <p className="faint" style={{ fontSize: 11.5, marginTop: 14, marginBottom: 0 }}>Live order execution is disabled. All trading shown is simulated (paper).</p>
-      </motion.form>
-    </div>
-  );
-}
-
 function LiveDot() {
   const { connected } = useEvents();
   return <span className={`badge ${connected ? "ok" : "warn"}`} title="Server-sent event stream"><span className="dot" />{connected ? "live" : "reconnecting"}</span>;
@@ -76,22 +41,23 @@ function LiveDot() {
 function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const loc = useLocation();
   const reduce = useReducedMotion();
-  const page = PAGES.find((p) => p.path === loc.pathname) ?? PAGES[0];
+  const sub = loc.pathname.replace(/^\/app/, "") || "/";
+  const page = PAGES.find((p) => p.path === sub) ?? PAGES[0];
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark" />
+        <NavLink to="/" className="brand" style={{ color: "inherit" }}>
+          <Mascot role="fund_manager" size={28} />
           <div>
-            <div className="brand-title">Command Center</div>
+            <div className="brand-title">Evora Terminal</div>
             <div className="brand-sub">Multi-agent · Paper</div>
           </div>
-        </div>
+        </NavLink>
         <nav className="nav" aria-label="Main">
           {PAGES.map((p, i) => (
             <div key={p.path}>
               {"section" in p && p.section && <div className="nav-section">{p.section}</div>}
-              <NavLink to={p.path} end={p.path === "/"}><span className="idx">{String(i + 1).padStart(2, "0")}</span>{p.label}</NavLink>
+              <NavLink to={p.path === "/" ? "/app" : `/app${p.path}`} end={p.path === "/"}><span className="idx">{String(i + 1).padStart(2, "0")}</span>{p.label}</NavLink>
             </div>
           ))}
         </nav>
@@ -111,9 +77,11 @@ function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
         <AnimatePresence mode="wait">
           <motion.div key={loc.pathname} className="page" initial={reduce ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
             exit={reduce ? undefined : { opacity: 0 }} transition={{ duration: 0.18 }}>
-            <Routes location={loc}>
-              {PAGES.map((p) => <Route key={p.path} path={p.path} element={<p.el me={me} />} />)}
-              <Route path="*" element={<Navigate to="/" replace />} />
+            <Routes>
+              {PAGES.map((p) => p.path === "/"
+                ? <Route key="index" index element={<p.el me={me} />} />
+                : <Route key={p.path} path={p.path.slice(1)} element={<p.el me={me} />} />)}
+              <Route path="*" element={<Navigate to="/app" replace />} />
             </Routes>
           </motion.div>
         </AnimatePresence>
@@ -131,10 +99,18 @@ export default function App() {
     return () => window.removeEventListener("tcc:unauthorized", onUnauth);
   }, []);
   if (me === undefined) return null;
-  if (me === null) return <Login onLogin={setMe} />;
   return (
-    <EventsProvider enabled>
-      <Shell me={me} onLogout={() => api.post("/auth/logout").finally(() => setMe(null))} />
-    </EventsProvider>
+    <Routes>
+      <Route path="/" element={<Landing loggedIn={!!me} />} />
+      <Route path="/login" element={me ? <Navigate to="/app" replace /> : <LoginPage onAuth={setMe} />} />
+      <Route path="/signup" element={me ? <Navigate to="/app" replace /> : <SignupPage onAuth={setMe} />} />
+      <Route path="/terms" element={<TermsPage loggedIn={!!me} />} />
+      <Route path="/app/*" element={me ? (
+        <EventsProvider enabled>
+          <Shell me={me} onLogout={() => api.post("/auth/logout").finally(() => setMe(null))} />
+        </EventsProvider>
+      ) : <Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

@@ -7,6 +7,7 @@ import type { AgentOutput, AgentStatus } from "../lib/types";
 import { Claims, Kv, StatusBadge } from "./ui";
 import { ago, ts } from "../lib/format";
 import { useApi } from "../lib/hooks";
+import { BY_ROLE, Mascot } from "./Mascot";
 
 const ACTIVE_MS = 4500;
 
@@ -118,8 +119,8 @@ export function AgentNetwork({ agents, onSelect }: { agents: AgentStatus[]; onSe
 
 const RING = ["macro", "fundamental", "onchain", "flow", "technical", "quant", "critic", "risk"];
 const RING_LABEL: Record<string, string> = {
-  macro: "Macro", fundamental: "Fundamentals", onchain: "On-chain", flow: "Whale/Flow", technical: "Technical",
-  quant: "Quant validation", critic: "Critical review", risk: "Risk management",
+  macro: "Atlas · Macro", fundamental: "Sage · Fundamentals", onchain: "Cipher · On-chain", flow: "Vortex · Flow", technical: "Chronos · Technical",
+  quant: "Alpha · Quant", critic: "Killjoy · Critic", risk: "Sentinel · Risk",
 };
 
 function stanceColor(a?: AgentStatus): string {
@@ -191,7 +192,8 @@ export function AgentDrawer({ role, onClose }: { role: string | null; onClose: (
           <motion.aside className="drawer" initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 40, opacity: 0 }} transition={{ duration: 0.2 }}
             role="dialog" aria-label={`${data?.name ?? role} details`}>
             <div className="row" style={{ marginBottom: 12 }}>
-              <h2 style={{ margin: 0, fontSize: 17 }}>{data?.name ?? role}</h2>
+              <Mascot role={role} size={34} active />
+              <h2 style={{ margin: 0, fontSize: 17, color: BY_ROLE[role]?.color }}>{data?.name ?? role}</h2>
               <div style={{ flex: 1 }} />
               <button className="btn sm" onClick={onClose}>Close</button>
             </div>
@@ -209,7 +211,7 @@ export function AgentDrawer({ role, onClose }: { role: string | null; onClose: (
                 <Kv rows={[
                   ["Confidence", o.confidence == null ? "n/a" : o.confidence.toFixed(2)],
                   ["Snapshot", o.snapshot_id.slice(0, 8)],
-                  ["Prompt", o.prompt_version],
+                  ...(o.prompt_version ? [["Prompt", o.prompt_version] as [string, string]] : []),
                   ["Next action", o.recommended_next_action],
                 ]} />
                 <p className="faint" style={{ fontSize: 11 }}>{o.confidence_note}</p>

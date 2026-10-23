@@ -12,6 +12,9 @@ AGENT_ALIASES = {
     "macro": "macro", "makro": "macro", "fundamental": "fundamental", "on-chain": "onchain", "onchain": "onchain",
     "whale": "flow", "flow": "flow", "technical": "technical", "teknikal": "technical", "quant": "quant",
     "risk manager": "risk", "risk": "risk", "risiko": "risk", "critic": "critic", "reviewer": "critic", "fund manager": "fund_manager",
+    # mascot names
+    "atlas": "macro", "sage": "fundamental", "cipher": "onchain", "vortex": "flow", "chronos": "technical",
+    "alpha": "quant", "sentinel": "risk", "killjoy": "critic", "odin": "fund_manager",
 }
 
 

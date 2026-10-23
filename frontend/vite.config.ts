@@ -7,5 +7,6 @@ export default defineConfig({
     port: 5173,
     proxy: { "/api": { target: process.env.VITE_API_TARGET ?? "http://localhost:8000", changeOrigin: false } },
   },
-  build: { sourcemap: false, chunkSizeWarningLimit: 900 },
+  // No data: URI inlining, so the CSP can keep font-src/img-src to 'self'.
+  build: { sourcemap: false, chunkSizeWarningLimit: 900, assetsInlineLimit: 0 },
 });

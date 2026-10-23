@@ -213,7 +213,7 @@ def svc_callback(body: CallbackIn, db: DB, p: Service) -> dict[str, Any]:
 
 
 class TelegramPushIn(BaseModel):
-    kind: str = Field("report", pattern="^(report|alert)$")
+    kind: str = Field("report", pattern="^(report|alert|growth)$")
     message: str | None = Field(None, max_length=1000)
 
 
@@ -227,7 +227,36 @@ def svc_telegram_push(body: TelegramPushIn, db: DB, p: Service) -> dict[str, Any
     s = get_settings()
     if not s.telegram_bot_token.get_secret_value():
         return {"status": "not_configured"}
-    text_out = h_report(db, Intent("report", period="today")) if body.kind == "report" else f"PERINGATAN SISTEM: {body.message or 'cek dashboard'}"
+    if body.kind == "report":
+        text_out = h_report(db, Intent("report", period="today"))
+    elif body.kind == "growth":
+        text_out = growth_digest(db)
+    else:
+        text_out = f"PERINGATAN SISTEM: {body.message or 'cek dashboard'}"
     sender = TelegramSender()
     sent = sum(notify(db, sender, uid, body.kind, text_out) for uid in s.telegram_allowlist)
     return {"status": "ok", "sent": sent, "recipients": len(s.telegram_allowlist)}
+
+
+def growth_digest(db) -> str:
+    """Aggregate counts only; no usernames or emails leave the database."""
+    from datetime import timedelta
+
+    from sqlalchemy import func
+
+    from app.db.models import TelegramRequest, User, UserSession
+
+    now = utcnow()
+    total = db.scalar(select(func.count()).select_from(User)) or 0
+    new_24h = db.scalar(select(func.count()).select_from(User).where(User.created_at > now - timedelta(days=1))) or 0
+    new_7d = db.scalar(select(func.count()).select_from(User).where(User.created_at > now - timedelta(days=7))) or 0
+    active = db.scalar(select(func.count(func.distinct(UserSession.user_id))).where(UserSession.created_at > now - timedelta(days=1))) or 0
+    tg = db.scalar(select(func.count()).select_from(TelegramRequest).where(TelegramRequest.created_at > now - timedelta(days=1))) or 0
+    return (f"Ringkasan pertumbuhan per {now:%Y-%m-%d %H:%M} UTC\n"
+            f"Total akun: {total} | Baru 24 jam: {new_24h} | Baru 7 hari: {new_7d}\n"
+            f"Pengguna login 24 jam: {active} | Permintaan Telegram 24 jam: {tg}")
+
+
+@router.get("/service/growth")
+def svc_growth(db: DB, p: Service) -> dict[str, Any]:
+    return {"digest": growth_digest(db)}

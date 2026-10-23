@@ -68,6 +68,7 @@ The workflows reference credential id `tccServiceToken1` and error workflow id `
 | 04 Backtests | daily 01:30 UTC | `/service/backtest` (backend lock prevents overlap) |
 | 05 Health | every 10 min | `/health/deep`, Telegram alert when unhealthy |
 | 06 Daily report | 00:00 UTC (07:00 WIB) | `/service/telegram/push` |
+| 07 Growth digest | 00:15 UTC | `/service/telegram/push` (`kind=growth`): account and activity **counts only**, no usernames or emails |
 
 To test one workflow from the CLI, use a separate broker port so it doesn't collide with the running instance:
 

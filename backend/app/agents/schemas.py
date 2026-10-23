@@ -13,7 +13,11 @@ Stance = Literal["bullish", "bearish", "neutral", "no_view"]
 Status = Literal["completed", "insufficient_data", "error", "veto"]
 FinalDecision = Literal["LONG", "SHORT", "WATCHLIST", "WAIT FOR CONFIRMATION", "REJECT", "NO TRADE"]
 
-AGENT_NAMES: dict[str, str] = {
+AGENT_PERSONAS: dict[str, str] = {
+    "macro": "Atlas", "fundamental": "Sage", "onchain": "Cipher", "flow": "Vortex", "technical": "Chronos",
+    "quant": "Alpha", "risk": "Sentinel", "critic": "Killjoy", "fund_manager": "Odin",
+}
+_ROLE_TITLES = {
     "macro": "Macro Analyst",
     "fundamental": "Fundamental Analyst",
     "onchain": "On-Chain Analyst",
@@ -24,6 +28,7 @@ AGENT_NAMES: dict[str, str] = {
     "critic": "Critical Reviewer",
     "fund_manager": "Fund Manager",
 }
+AGENT_NAMES: dict[str, str] = {r: f"{AGENT_PERSONAS[r]} · {t}" for r, t in _ROLE_TITLES.items()}
 
 CONFIDENCE_NOTE = "Heuristic evidence-strength score in [0,1]; NOT a calibrated probability (no calibration has been performed)."
 

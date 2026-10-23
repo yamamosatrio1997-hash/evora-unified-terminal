@@ -6,13 +6,13 @@ Date: 2026-10-23. **Verdict: not production-ready for trading decisions, and liv
 
 | Area | Evidence |
 |---|---|
-| Backend unit + integration tests | **116 passed, 0 failed** (pytest against real PostgreSQL 16 locally; CI uses 17) |
+| Backend unit + integration tests | **122 passed, 0 failed** (pytest against real PostgreSQL 16 locally; CI uses 17) |
 | Frontend | `tsc --noEmit` clean, production build succeeds, 2 vitest tests pass |
 | Lint | `ruff` (E, F, W, B) clean |
 | Migrations | upgrade → downgrade → upgrade round-trip; `alembic check` shows no drift |
 | Docker Compose stack | built and run locally: postgres 17, backend, nginx frontend, n8n 2.44.6, all healthy |
-| n8n | all 7 workflows imported into real n8n 2.44.6. Workflows 01 (ingest → paper mark → callback) and 05 (health → IF → alert → callback) **executed end-to-end** against the backend, and both executions were recorded |
-| Dashboard | Playwright (Chromium) logged in and loaded all 12 pages with no JS errors (only the expected pre-login 401). A debate started from the browser produced 16 live `agent.state` events over SSE, rendered on the Agent Network. The mobile viewport has no horizontal overflow |
+| n8n | all 8 workflows imported into real n8n 2.44.6. Workflows 01 (ingest → paper mark → callback) and 05 (health → IF → alert → callback) **executed end-to-end** against the backend, and both executions were recorded |
+| Homepage + dashboard (end-to-end) | Playwright, 34 checks, all passing, zero console errors: homepage renders and its illustration animates, anchors and FAQ work, mobile has no overflow; signup validation, signup → auto-login as viewer, viewer redaction, logout, auth guard, wrong-password error; admin navigates all 12 pages; the live trading floor reacts to a real debate and settles afterwards; desk → drawer; tabs; Run debate, Run backtest, risk calculator, emergency stop engage/release, mark to market, ingestion, settings save, audit-chain verify |
 | Restart/recovery | postgres restart, backend restart and full `down`/`up` with volumes kept: data intact, audit chain verifies, n8n workflows persist |
 
 ### Acceptance criteria (section 13)
@@ -42,6 +42,7 @@ Date: 2026-10-23. **Verdict: not production-ready for trading decisions, and liv
 | 21 | Animations reflect real events | ✅ | SSE-driven only; `test_no_agent_left_in_active_state_after_debate`; Playwright check |
 | 22 | Restart and recovery | ✅ | manual compose tests above; orphaned-debate abort tested |
 | 23 | Secrets absent from source control | ✅ | `test_no_secrets_in_tracked_files` |
+| — | Strategy internals and private data hidden from non-admins | ✅ | `test_strategy_internals_hidden_from_non_admin`, `test_telegram_ids_masked`, Playwright viewer checks |
 
 ## Not executed, or blocked
 
@@ -53,6 +54,8 @@ Date: 2026-10-23. **Verdict: not production-ready for trading decisions, and liv
 - **TLS profile (Caddy)**: not exercised; it needs a real domain.
 
 ## Known limitations and risks
+
+0. **Signups**: there is no email verification or password reset yet, because no mail service is configured. Public signups are open by default (`ALLOW_SIGNUP=true`) and create read-only viewers. Close them or add verification before promoting the site widely.
 
 1. **Quant edge**: on the synthetic data used for testing, no strategy showed a robust out-of-sample edge, which is expected from a random walk. Because the quant gate requires one, the system will mostly output NO TRADE / WAIT FOR CONFIRMATION until a strategy passes on real data. That is intended.
 2. **Rule-family mismatch**: the Quant Researcher tests the EMA-trend family, while the Technical Analyst's setup also uses swing-level stops and a 2R target. They are close but not identical rules.

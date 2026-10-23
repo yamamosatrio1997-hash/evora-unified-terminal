@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Me } from "../App";
 import { EquityChart } from "../components/charts";
+import { AgentBadge } from "../components/Mascot";
 import { Card, DataTag, DecisionBadge, Empty, ErrorNote, Stat, StatusBadge, Updated } from "../components/ui";
 import { useEvents } from "../lib/events";
 import { age, ago, num, pct, ts } from "../lib/format";
@@ -74,22 +75,22 @@ export default function CommandCenter(_: { me: Me }) {
             {p.equity_curve.length < 2 ? <Empty title="No equity history yet">The curve appears after paper trades or mark-to-market snapshots exist.</Empty>
               : <EquityChart points={p.equity_curve} />}
           </Card>
-          <Card title="Recent decisions" right={<Link to="/debate">Debate Room →</Link>}>
+          <Card title="Recent decisions" right={<Link to="/app/debate">Debate Room →</Link>}>
             {data.recent_decisions.length === 0 ? <Empty title="No decisions yet">Run a debate from the Debate Room or let the n8n schedule trigger one.</Empty> : (
               <table className="t"><thead><tr><th>Time</th><th>Symbol</th><th>Decision</th><th>Session</th></tr></thead><tbody>
                 {data.recent_decisions.map((d) => (
                   <tr key={d.id}><td className="mono faint">{ts(d.created_at)}</td><td>{d.symbol}</td><td><DecisionBadge value={d.decision} /></td>
-                    <td><Link className="mono" to={`/debate?session=${d.session_id}`}>{d.session_id.slice(0, 8)}</Link></td></tr>
+                    <td><Link className="mono" to={`/app/debate?session=${d.session_id}`}>{d.session_id.slice(0, 8)}</Link></td></tr>
                 ))}</tbody></table>
             )}
           </Card>
         </div>
         <div className="grid" style={{ gap: 14, alignContent: "start" }}>
-          <Card title="Agents" right={<Link to="/agents">Network →</Link>}>
+          <Card title="Agents" right={<Link to="/app/agents">Network →</Link>}>
             <table className="t"><tbody>
               {data.agents.map((a) => (
                 <tr key={a.role}>
-                  <td>{a.name}</td>
+                  <td><AgentBadge role={a.role} size={22} showTitle /></td>
                   <td><StatusBadge value={a.state} /></td>
                   <td className="faint mono" style={{ fontSize: 11 }}>{a.last_analysis ? ago(a.last_analysis.created_at) : "—"}</td>
                 </tr>

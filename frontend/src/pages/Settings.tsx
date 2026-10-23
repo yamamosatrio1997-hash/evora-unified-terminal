@@ -33,25 +33,26 @@ export default function SettingsPage({ me }: { me: Me }) {
             <Card title="Environment">
               <Kv rows={[["Environment", d.environment], ["Mode", d.mode], ["Live trading", String(d.live_trading_enabled)]]} />
             </Card>
-            <Card title="LLM provider">
+            {d.llm && <Card title="LLM provider">
               <Kv rows={[["Provider", d.llm.provider], ["Model", d.llm.model], ["Configured", String(d.llm.configured)], ["Token budget / debate", d.llm.token_budget_per_debate],
                 ["Cost budget / debate", `$${d.llm.cost_budget_per_debate_usd}`], ["Usage to date", `${d.llm.total_tokens} tokens · $${d.llm.total_cost_usd}`]]} />
-            </Card>
-            <Card title="Secrets (configured?)">
+            </Card>}
+            {d.secrets_configured && <Card title="Secrets (configured?)">
               <div className="row">{Object.entries(d.secrets_configured).map(([k, v]) => <StatusBadge key={k} value={v ? "configured" : "not_configured"} label={k.replace(/_/g, " ")} />)}</div>
-            </Card>
+            </Card>}
+            {!d.llm && <Card title="Account"><Kv rows={[["Username", me.username], ["Role", me.role]]} />
+              <p className="faint" style={{ fontSize: 11.5 }}>Configuration details, model settings and strategy internals are visible to administrators only.</p></Card>}
           </div>
           <div className="grid g2">
             <Card title="Risk limits (server-enforced)">
               <Kv rows={Object.entries(d.risk).map(([k, v]) => [k.replace(/_/g, " "), typeof v === "string" && Number(v) < 1 && !k.includes("seconds") ? pct(v, 1) : String(v)])} />
             </Card>
-            <Card title="Prompt versions & debate rounds">
-              <Kv rows={Object.entries(d.prompt_versions).map(([k, v]) => [k, String(v)])} />
-              <div className="stat-label" style={{ marginTop: 10 }}>Rounds</div>
+            <Card title="Debate rounds">
+              {d.prompt_versions && <><Kv rows={Object.entries(d.prompt_versions).map(([k, v]) => [k, String(v)])} /><div className="stat-label" style={{ marginTop: 10 }}>Rounds</div></>}
               <Kv rows={Object.entries(d.debate_rounds).map(([k, v]) => [`R${k}`, String(v)])} />
             </Card>
           </div>
-          <Card title="Agents enabled" right={me.role === "admin" ? <button className="btn sm primary" onClick={save}>Save</button> : <span className="faint">admin only</span>}>
+          {me.role === "admin" && <Card title="Agents enabled" right={me.role === "admin" ? <button className="btn sm primary" onClick={save}>Save</button> : <span className="faint">admin only</span>}>
             <div className="row">
               {ROLES.map((r) => (
                 <label key={r} className="row muted" style={{ gap: 4, fontSize: 13 }}>
@@ -62,7 +63,7 @@ export default function SettingsPage({ me }: { me: Me }) {
             </div>
             <p className="faint" style={{ fontSize: 11.5 }}>Risk Manager and Fund Manager cannot be disabled. Schedules are defined in the n8n workflows.</p>
             {msg && <div className="notice info">{msg}</div>}
-          </Card>
+          </Card>}
         </>
       )}
       {me.role === "admin" && (

@@ -24,7 +24,7 @@ export interface AgentStatus {
     errors: string[];
     llm_used: boolean;
     model: string | null;
-    prompt_version: string;
+    prompt_version?: string;
   };
 }
 
@@ -147,7 +147,7 @@ export interface AgentOutput {
   metrics: Record<string, any>;
   trade_idea: null | { side: string; timeframe: string; entry: number; entry_trigger: string; stop_loss: number; take_profit: number | null; invalidation: string };
   model: string | null;
-  prompt_version: string;
+  prompt_version?: string;
   llm_used: boolean;
   errors: string[];
 }

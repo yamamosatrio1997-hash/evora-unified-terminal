@@ -1,0 +1,153 @@
+{
+  "id": "tccGrowthDigest1",
+  "name": "TCC 07 - Daily growth digest (counts only)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "67f8f0a0-cd65-5c4b-8fb1-68a932f81c04",
+      "name": "Daily 00:15 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/telegram/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"kind\": \"growth\"}"
+      },
+      "id": "646c0467-4974-5e22-95a6-7f2d5b1ed4ac",
+      "name": "Send growth digest to admins",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/n8n/callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow_id: $workflow.id, workflow_name: $workflow.name, execution_id: $execution.id, status: \"success\", started_at: $execution.startedAt ? $execution.startedAt : null, finished_at: $now.toISO() }) }}"
+      },
+      "id": "9ceb79eb-5200-53c7-a21e-1bad19adc735",
+      "name": "Report success to backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "90bf11fd-87c7-5e65-9222-275dbd970caa",
+      "name": "Run on demand",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Daily 00:15 UTC": {
+      "main": [
+        [
+          {
+            "node": "Send growth digest to admins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send growth digest to admins": {
+      "main": [
+        [
+          {
+            "node": "Report success to backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run on demand": {
+      "main": [
+        [
+          {
+            "node": "Send growth digest to admins",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 900,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tccErrorHandler1",
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "versionId": "01a5ba6c-1b07-56ed-9dc2-7ec0ee8b7568"
+}

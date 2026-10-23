@@ -108,7 +108,7 @@ export default function QuantLab({ me }: { me: Me }) {
             <>
               <Card title={`${run.data.strategy} · ${run.data.symbol} ${run.data.interval}`} right={<><DataTag kind="BACKTEST" />{run.data.dataset_kind === "simulated" && <DataTag kind="SIMULATED" />}</>}>
                 <Kv rows={[["Data", `${run.data.data_source} · ${ts(run.data.data_start)} → ${ts(run.data.data_end)}`], ["Status", run.data.status],
-                  ["Selected params (in-sample)", split ? JSON.stringify(split.selected_params) : "—"], ["Configs tried", split?.configs_tried ?? "—"]]} />
+                  ["Selected params (in-sample)", !split ? "—" : typeof split.selected_params === "string" ? "admin only" : JSON.stringify(split.selected_params)], ["Configs tried", split?.configs_tried ?? "—"]]} />
                 {run.data.error && <div className="notice" style={{ marginTop: 8 }}>{run.data.error}</div>}
                 {(r?.overfitting_warnings ?? []).length > 0 && (
                   <div className="notice" style={{ marginTop: 10 }}><strong>Overfitting / reliability warnings</strong>
@@ -151,7 +151,7 @@ export default function QuantLab({ me }: { me: Me }) {
                   <>
                     <table className="t"><thead><tr><th>Fold</th><th>Test window</th><th>Params</th><th>Trades</th><th>Win rate</th><th>PF</th><th>Exp (R)</th><th>Max DD</th><th>Return</th></tr></thead><tbody>
                       {wf.folds.map((f: any) => (
-                        <tr key={f.fold}><td>{f.fold}</td><td className="mono faint">{f.test[0].slice(0, 10)} → {f.test[1].slice(0, 10)}</td><td className="mono" style={{ fontSize: 11 }}>{JSON.stringify(f.params)}</td>
+                        <tr key={f.fold}><td>{f.fold}</td><td className="mono faint">{f.test[0].slice(0, 10)} → {f.test[1].slice(0, 10)}</td><td className="mono" style={{ fontSize: 11 }}>{typeof f.params === "string" ? "admin only" : JSON.stringify(f.params)}</td>
                           <td>{f.metrics.trades}</td><td>{pct(f.metrics.win_rate, 0)}</td><td>{f.metrics.profit_factor == null ? "n/a" : num(f.metrics.profit_factor)}</td>
                           <td>{f.metrics.expectancy_r == null ? "—" : num(f.metrics.expectancy_r, 3)}</td><td>{pct(f.metrics.max_drawdown, 1)}</td><td className={f.metrics.return_pct >= 0 ? "bull" : "bear"}>{pct(f.metrics.return_pct, 1)}</td></tr>
                       ))}</tbody></table>

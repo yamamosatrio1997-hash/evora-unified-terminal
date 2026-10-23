@@ -35,7 +35,7 @@ def login(c, name):
 def test_health_endpoints(client):
     assert client.get("/api/health").json()["status"] == "ok"
     r = client.get("/api/health/ready").json()
-    assert r["status"] == "ready" and r["migration"] == "0001"
+    assert r["status"] == "ready" and r["migration"] == "0002"
 
 
 def test_security_headers(client):
@@ -173,3 +173,89 @@ def test_overview_with_no_data_is_honest(client):
     assert all(a["state"] == "idle" for a in o["agents"])
     c = client.get("/api/market/candles?symbol=BTCUSDT&interval=4h").json()
     assert c["status"] == "unavailable" and c["rows"] == []
+
+
+# ---------------------------------------------------------------- registration
+
+@pytest.fixture()
+def fresh_signup_limit(monkeypatch):
+    import app.api.routes as r
+
+    monkeypatch.setattr(r, "_signup_limiter", None)
+
+
+def reg(c, **kw):
+    body = {"username": "newtrader", "email": "New@Example.com", "password": "long-enough-pass-123", "accept_terms": True} | kw
+    return c.post("/api/auth/register", json=body)
+
+
+def test_register_creates_viewer_and_logs_in(client, fresh_signup_limit):
+    r = reg(client)
+    assert r.status_code == 201 and r.json() == {"username": "newtrader", "role": "viewer"}
+    assert client.get("/api/auth/me").json()["role"] == "viewer"
+    # viewers cannot mutate
+    assert client.post("/api/risk/emergency-stop", json={"active": True, "reason": "x stop"}, headers=CSRF).status_code == 403
+    client.cookies.clear()
+    assert client.post("/api/auth/login", json={"username": "newtrader", "password": "long-enough-pass-123"}).status_code == 200
+
+
+def test_register_validation(client, fresh_signup_limit):
+    assert reg(client, accept_terms=False).status_code == 400
+    assert reg(client, password="short").status_code == 422
+    assert reg(client, username="a b").status_code == 422
+    assert reg(client, email="not-an-email").status_code == 422
+    assert reg(client, password="newtrader", username="newtrader").status_code in (400, 422)
+    assert reg(client).status_code == 201
+    dup_user = reg(client, email="other@example.com")
+    dup_mail = reg(client, username="someoneelse", email="new@example.com")
+    assert dup_user.status_code == dup_mail.status_code == 409
+    assert dup_user.json() == dup_mail.json()  # no account enumeration
+
+
+def test_register_rate_limited(client, monkeypatch):
+    import app.api.routes as r
+    from app.security.ratelimit import RateLimiter
+
+    monkeypatch.setattr(r, "_signup_limiter", RateLimiter(2, 3600))
+    codes = [reg(client, username=f"user{i}", email=f"u{i}@example.com").status_code for i in range(3)]
+    assert codes == [201, 201, 429]
+
+
+def test_register_can_be_disabled(client, monkeypatch, fresh_signup_limit):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "allow_signup", False)
+    assert reg(client).status_code == 403
+
+
+# ---------------------------------------------------------------- redaction
+
+def test_strategy_internals_hidden_from_non_admin(client, db):
+    from app.cli import seed_simulated
+    from app.quant.service import run_backtest_job
+
+    seed_simulated(["BTCUSDT"], days=160)
+    run = run_backtest_job(db, "ema_trend", "BTCUSDT", "4h", mc_runs=100)
+    db.commit()
+    login(client, "viewer")
+    assert all("grid" not in s and "defaults" not in s for s in client.get("/api/quant/strategies").json())
+    d = client.get(f"/api/quant/backtests/{run.id}").json()
+    assert d["results"]["split"]["selected_params"] == "hidden"
+    assert all(f["params"] == "hidden" for f in d["results"]["walk_forward"]["folds"])
+    assert "assumptions" not in d
+    st = client.get("/api/settings").json()
+    assert "prompt_versions" not in st and "secrets_configured" not in st and "llm" not in st
+    login(client, "admin")
+    assert client.get(f"/api/quant/backtests/{run.id}").json()["results"]["split"]["selected_params"] != "hidden"
+    assert "prompt_versions" in client.get("/api/settings").json()
+
+
+def test_telegram_ids_masked(client, db):
+    from app.db.models import TelegramRequest
+
+    db.add(TelegramRequest(user_id=123456789, chat_id=1, authorized=True, status="answered"))
+    db.commit()
+    login(client, "admin")
+    rows = client.get("/api/telegram/status").json()["requests"]
+    assert rows[0]["user_id"] == "•••789"
+    assert "123456789" not in json.dumps(rows)
