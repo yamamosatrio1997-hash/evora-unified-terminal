@@ -1,0 +1,57 @@
+{
+  "office": {
+    "name": "EVORA HQ - Lantai 3",
+    "width": 12.0,
+    "depth": 8.0,
+    "wall_height": 2.6,
+    "show_labels": true
+  },
+  "status_colors": {
+    "active": "#3BB273",
+    "maintenance": "#F2A541",
+    "broken": "#E15554",
+    "retired": "#8D99AE"
+  },
+  "zones": [
+    {"id": "WS",  "name": "Workstation",  "rect": [-6.0, -4.0, 1.0, 1.0],  "floor": "#D9CBB3"},
+    {"id": "MTG", "name": "Meeting Room", "rect": [1.0, -4.0, 6.0, 0.5],   "floor": "#C7D3DD"},
+    {"id": "SRV", "name": "Server Room",  "rect": [2.5, 0.5, 6.0, 4.0],    "floor": "#B9BEC4", "label_pos": [3.15, 2.7]},
+    {"id": "STO", "name": "Storage & Print", "rect": [-6.0, 1.0, 2.5, 4.0], "floor": "#E3DCCF", "label_pos": [-5.85, 2.0]}
+  ],
+  "partitions": [
+    {"from": [1.0, -4.0], "to": [1.0, -1.2], "type": "glass"},
+    {"from": [1.0, 0.2],  "to": [1.0, 0.5],  "type": "glass"},
+    {"from": [1.0, 0.5],  "to": [2.5, 0.5],  "type": "glass"},
+    {"from": [2.5, 0.5],  "to": [4.0, 0.5],  "type": "solid"},
+    {"from": [5.0, 0.5],  "to": [6.0, 0.5],  "type": "solid"},
+    {"from": [2.5, 0.5],  "to": [2.5, 4.0],  "type": "solid"}
+  ],
+  "assets": [
+    {"id": "WS-001", "type": "workstation", "name": "Dell OptiPlex 7010 + 24\" Monitor", "zone": "WS", "pos": [-4.8, -2.9], "rot": 0,   "status": "active",      "owner": "Andi Pratama",  "purchase": "2024-02-12", "value_idr": 18500000},
+    {"id": "WS-002", "type": "workstation", "name": "Dell OptiPlex 7010 + 24\" Monitor", "zone": "WS", "pos": [-3.0, -2.9], "rot": 0,   "status": "active",      "owner": "Sari Wulandari", "purchase": "2024-02-12", "value_idr": 18500000},
+    {"id": "WS-003", "type": "workstation", "name": "HP ProDesk 400 + 22\" Monitor",     "zone": "WS", "pos": [-1.2, -2.9], "rot": 0,   "status": "maintenance", "owner": "Budi Santoso",  "purchase": "2022-08-03", "value_idr": 14200000},
+    {"id": "WS-004", "type": "workstation", "name": "HP ProDesk 400 + 22\" Monitor",     "zone": "WS", "pos": [-4.8, -0.6], "rot": 180, "status": "active",      "owner": "Rina Kusuma",   "purchase": "2022-08-03", "value_idr": 14200000},
+    {"id": "WS-005", "type": "workstation", "name": "Lenovo ThinkCentre M70",            "zone": "WS", "pos": [-3.0, -0.6], "rot": 180, "status": "broken",      "owner": "Dimas Ardi",    "purchase": "2021-01-20", "value_idr": 12800000},
+    {"id": "WS-006", "type": "workstation", "name": "Lenovo ThinkCentre M70",            "zone": "WS", "pos": [-1.2, -0.6], "rot": 180, "status": "retired",     "owner": "-",             "purchase": "2019-05-14", "value_idr": 0},
+    {"id": "LT-011", "type": "laptop",      "name": "MacBook Pro 14\" M3",               "zone": "MTG", "pos": [3.0, -2.15], "rot": 0,  "status": "active",      "owner": "Maya Lestari",  "purchase": "2025-01-08", "value_idr": 32000000},
+    {"id": "LT-012", "type": "laptop",      "name": "ThinkPad X1 Carbon",                "zone": "MTG", "pos": [4.2, -1.45], "rot": 180, "status": "active",     "owner": "Yoga Prasetyo", "purchase": "2024-06-21", "value_idr": 27500000},
+    {"id": "MT-001", "type": "meeting_table", "name": "Meja Rapat 8 Kursi",              "zone": "MTG", "pos": [3.6, -1.8], "rot": 0,   "status": "active",      "owner": "GA",            "purchase": "2023-03-01", "value_idr": 9500000},
+    {"id": "TV-001", "type": "display",     "name": "Samsung 65\" Smart Signage",        "zone": "MTG", "pos": [5.85, -1.8], "rot": 270, "status": "active",      "owner": "IT",            "purchase": "2023-03-01", "value_idr": 21000000},
+    {"id": "SR-001", "type": "server_rack", "name": "Rack 42U - Core Network",           "zone": "SRV", "pos": [3.4, 3.4],  "rot": 0, "status": "active",      "owner": "IT",            "purchase": "2022-11-10", "value_idr": 145000000},
+    {"id": "SR-002", "type": "server_rack", "name": "Rack 42U - Storage NAS",            "zone": "SRV", "pos": [4.3, 3.4],  "rot": 0, "status": "maintenance", "owner": "IT",            "purchase": "2022-11-10", "value_idr": 98000000},
+    {"id": "SR-003", "type": "server_rack", "name": "Rack 24U - Backup",                 "zone": "SRV", "pos": [5.2, 3.4],  "rot": 0, "status": "active",      "owner": "IT",            "purchase": "2023-07-19", "value_idr": 56000000},
+    {"id": "UP-001", "type": "ups",         "name": "APC Smart-UPS 3000VA",              "zone": "SRV", "pos": [5.5, 1.3],  "rot": 270, "status": "broken",      "owner": "IT",            "purchase": "2020-09-02", "value_idr": 24000000},
+    {"id": "AC-001", "type": "ac_unit",     "name": "Precision AC 2PK",                  "zone": "SRV", "pos": [2.75, 2.3], "rot": 90,  "status": "active",      "owner": "GA",            "purchase": "2022-11-10", "value_idr": 17500000},
+    {"id": "PR-001", "type": "printer",     "name": "Canon imageRUNNER 2630",            "zone": "STO", "pos": [-0.6, 2.6], "rot": 0,   "status": "active",      "owner": "GA",            "purchase": "2023-05-15", "value_idr": 38000000},
+    {"id": "PR-002", "type": "printer",     "name": "Epson L6290",                       "zone": "STO", "pos": [1.0, 2.6],  "rot": 0,   "status": "maintenance", "owner": "GA",            "purchase": "2021-10-11", "value_idr": 5600000},
+    {"id": "CB-001", "type": "cabinet",     "name": "Lemari Arsip Besi 4 Laci",          "zone": "STO", "pos": [-5.6, 3.55], "rot": 0, "status": "active",     "owner": "Finance",       "purchase": "2018-04-09", "value_idr": 3200000},
+    {"id": "CB-002", "type": "cabinet",     "name": "Lemari Arsip Besi 4 Laci",          "zone": "STO", "pos": [-4.9, 3.55], "rot": 0, "status": "active",     "owner": "Finance",       "purchase": "2018-04-09", "value_idr": 3200000},
+    {"id": "CB-003", "type": "cabinet",     "name": "Lemari Arsip Besi 4 Laci",          "zone": "STO", "pos": [-4.2, 3.55], "rot": 0, "status": "retired",    "owner": "-",             "purchase": "2015-02-17", "value_idr": 0},
+    {"id": "SH-001", "type": "shelf",       "name": "Rak Spare Part IT",                 "zone": "STO", "pos": [-2.8, 3.6], "rot": 0, "status": "active",      "owner": "IT",            "purchase": "2022-01-05", "value_idr": 2500000},
+    {"id": "AP-001", "type": "access_point","name": "Ubiquiti U6 Pro",                   "zone": "WS",  "pos": [-3.0, -1.75], "rot": 0, "status": "active",      "owner": "IT",            "purchase": "2024-04-30", "value_idr": 3900000},
+    {"id": "AP-002", "type": "access_point","name": "Ubiquiti U6 Pro",                   "zone": "MTG", "pos": [3.6, -3.2], "rot": 0,   "status": "broken",      "owner": "IT",            "purchase": "2024-04-30", "value_idr": 3900000},
+    {"id": "CC-001", "type": "cctv",        "name": "Hikvision Dome 4MP",                "zone": "STO", "pos": [-5.85, 1.3], "rot": 90,  "status": "active",      "owner": "Security",      "purchase": "2023-09-12", "value_idr": 1800000},
+    {"id": "CC-002", "type": "cctv",        "name": "Hikvision Dome 4MP",                "zone": "SRV", "pos": [5.85, 3.85], "rot": 0,  "status": "active",      "owner": "Security",      "purchase": "2023-09-12", "value_idr": 1800000},
+    {"id": "FE-001", "type": "fire_extinguisher", "name": "APAR CO2 5kg",                "zone": "SRV", "pos": [2.75, 0.8], "rot": 0,   "status": "maintenance", "owner": "GA",            "purchase": "2021-06-01", "value_idr": 1500000}
+  ]
+}
