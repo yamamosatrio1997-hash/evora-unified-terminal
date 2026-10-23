@@ -10,17 +10,32 @@ DATA SOURCES -> VALIDATION -> SPECIALIZED AGENTS -> DEBATE -> QUANT VALIDATION -
 |---|---|---|
 | Backend API, agents, quant, risk, paper engine | Python 3.12, FastAPI, SQLAlchemy 2, Alembic | `backend/` |
 | Database | PostgreSQL 17 (append-only audit and risk tables) | `backend/alembic/` |
-| Orchestration | n8n 2.44.6 (7 importable workflows) | `n8n/workflows/` |
-| Dashboard | React 18, TypeScript, Framer Motion, React Flow, Lightweight Charts | `frontend/` |
+| Orchestration | n8n 2.44.6 (8 importable workflows) | `n8n/workflows/` |
+| Dashboard | React 18, TypeScript, Framer Motion, React Flow, Lightweight Charts, three.js via React Three Fiber (3D office) | `frontend/` |
 | Telegram AI Fund Manager | Bot API webhook or long polling, Indonesian by default | `backend/app/telegram/` |
 | MEXC | Read-only client; execution adapter refuses submission | `backend/app/exchange/` |
 | Deployment | Docker Compose, nginx, optional Caddy TLS | `docker-compose.yml`, `deploy/` |
 
 ## Product surfaces
 
-- **Public homepage** (`/`, Indonesian): animated pixel-art trading floor, team of nine mascots, how-it-works, risk-first and Telegram sections, FAQ, and a risk disclaimer. The hero animation is a scripted illustration and is labelled as such. No performance or profit claims appear anywhere.
+- **Public homepage** (`/`, Indonesian): 3D AI office (scripted illustration of two debate cycles, one ending in a risk veto), team of nine mascots, how-it-works, risk-first and Telegram sections, FAQ, and a risk disclaimer. The hero animation is a scripted illustration and is labelled as such. No performance or profit claims appear anywhere.
 - **Sign up / log in** (`/signup`, `/login`): self-registration creates read-only **viewer** accounts (scrypt-hashed password, HttpOnly session cookie, rate-limited, no account enumeration). Turn it off with `ALLOW_SIGNUP=false`.
-- **Dashboard** (`/app/*`): the 12 operational pages. Agent Network opens on a **live trading floor** where a mascot moves only when the backend emits an event for that agent.
+- **Dashboard** (`/app/*`): the 12 operational pages. Agent Network opens on a **live 3D office** where an AI employee works, walks to the debate room or sends a message only when the backend emits a matching event.
+
+### 3D office (`frontend/src/components/office3d/`)
+
+Rooms: Research Wing, Debate Room (round table with hologram), Quant Lab, Risk Vault, Review Booth, Fund Manager office, Data Center. All nine employees share one voxel body and differ only by colour.
+
+| Effect | Triggered by |
+|---|---|
+| Dashed arc + travelling packets + arrival ping (colour = message kind) | `debate.message` (recipient from `to`, otherwise table / Fund Manager / Critic) |
+| Analysts and Killjoy walk to the debate table | rounds 2–4 of a running debate (`debate.round_started`) |
+| Typing, antenna LED, pulse ring, speech bubble | `agent.state` / `debate.message` for that agent |
+| Data packets from the Data Center | `data.*` events or an analyst at work |
+| Red shockwave, vault alarm, VETO card | `debate.message` with kind `veto` |
+| Spotlight on Odin + decision card over the table | `debate.finished` |
+
+A deterministic debate emits about 75 events in roughly a second, so the live view queues debate events and replays them **in order at a readable pace** (about 25 s per debate, a REPLAY badge shows the queue). Camera: presets, orbit/zoom, "follow the debate", click an employee or its chip to open the agent drawer. The original 2D floor remains available (toggle) and is used automatically without WebGL or with reduced motion. The 3D scene is lazy-loaded (~235 KB gzip) and stops rendering when off-screen.
 
 ### The nine agents
 
@@ -38,7 +53,7 @@ All nine share one 16-bit silhouette (so blinking and bobbing animate identicall
 | Killjoy | Critical Reviewer | `#F87171` |
 | Odin | Fund Manager | `#FB923C` |
 
-Marketing videos of the animated floor (one full debate cycle, about 22 s, 30 fps) are in `docs/marketing/`, in 4:5 (feed) and 16:9 (web) formats. They show the illustration, not market data.
+Marketing videos of the animated 2D floor (one full debate cycle, about 22 s, 30 fps) are in `docs/marketing/`, in 4:5 (feed) and 16:9 (web) formats. They show the illustration, not market data. They have not been re-recorded for the 3D office: the build host has no GPU, and software WebGL renders at only 2–10 fps.
 
 ### What each role can see
 
@@ -88,6 +103,7 @@ cd frontend && npm ci && npm run dev    # proxies /api to localhost:8000
 - [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md): endpoints, keys, limits and verification status
 - [docs/LIVE_TRADING_GATES.md](docs/LIVE_TRADING_GATES.md): what must be true before live trading is even considered
 - [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md): test results, limitations, costs, open risks
+- [docs/COMPARISON.md](docs/COMPARISON.md): comparison with eight open-source projects (TradingAgents, freqtrade, …), licences, ideas adopted and rejected
 
 ## Important limitations
 

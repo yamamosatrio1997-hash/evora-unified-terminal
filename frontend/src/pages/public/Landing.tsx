@@ -2,30 +2,43 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { AGENTS, Mascot } from "../../components/Mascot";
-import { TradingFloor, type FloorAgent, type WallCandle } from "../../components/TradingFloor";
+import { TradingFloor, type WallCandle } from "../../components/TradingFloor";
+import { Office3D } from "../../components/office3d/Office3D";
+import type { CommLink, OfficeAgent } from "../../components/office3d/types";
 import { SiteFooter, SiteNav } from "./SiteChrome";
 
 /*
  * The hero animation is a scripted ILLUSTRATION of one debate cycle. It is labelled
  * as such on screen and contains no market data, prices or performance figures.
  */
-type Beat = { round: string; bubbles: Record<string, string>; badge?: string };
+type Link3 = [from: string, to: string, kind: string];
+type Beat = { round: string; bubbles: Record<string, string>; badge?: string; links?: Link3[]; table?: boolean; veto?: boolean; decision?: string };
+const ANALYSTS = ["macro", "fundamental", "onchain", "flow", "technical"];
+const toTable = (kind = "hypothesis"): Link3[] => ANALYSTS.map((r) => [r, "table", kind]);
+// Two illustrative cycles: one ends in WAIT FOR CONFIRMATION, the other shows a risk veto.
 const SCRIPT: Beat[] = [
-  { round: "R1 · Riset independen", bubbles: { macro: "Yield 10Y naik", fundamental: "Likuiditas cukup", onchain: "Stablecoin naik", flow: "Funding panas", technical: "Tren 4J naik" } },
-  { round: "R2 · Tukar bukti", bubbles: { macro: "Sumber: FRED", flow: "Sumber: Binance", technical: "Bukti dibagikan" } },
-  { round: "R3 · Tantangan", bubbles: { critic: "Long terlalu ramai?", flow: "Benar, risiko squeeze" } },
-  { round: "R3 · Tantangan", bubbles: { critic: "Edge sudah teruji?", technical: "Tanya Alpha" } },
-  { round: "R4 · Sintesis", bubbles: { fund_manager: "Ada perbedaan pendapat" } },
+  { round: "R1 · Riset independen", bubbles: { macro: "Yield 10Y naik", fundamental: "Likuiditas cukup", onchain: "Stablecoin naik", flow: "Funding panas", technical: "Tren 4J naik" }, links: toTable() },
+  { round: "R2 · Tukar bukti", bubbles: { macro: "Sumber: FRED", flow: "Sumber: Binance", technical: "Bukti dibagikan" }, table: true, links: [["macro", "technical", "evidence"], ["flow", "critic", "evidence"], ["onchain", "fundamental", "evidence"]] },
+  { round: "R3 · Tantangan", bubbles: { critic: "Long terlalu ramai?", flow: "Benar, risiko squeeze" }, table: true, links: [["critic", "flow", "challenge"], ["flow", "critic", "reply"]] },
+  { round: "R3 · Tantangan", bubbles: { critic: "Edge sudah teruji?", technical: "Tanya Alpha" }, table: true, links: [["critic", "technical", "challenge"], ["technical", "quant", "evidence"]] },
+  { round: "R4 · Sintesis", bubbles: { fund_manager: "Ada perbedaan pendapat" }, table: true, links: [["macro", "fund_manager", "synthesis"], ["onchain", "fund_manager", "synthesis"], ["critic", "fund_manager", "synthesis"]] },
   { round: "R5 · Validasi kuant", bubbles: { quant: "Uji out-of-sample" } },
-  { round: "R5 · Validasi kuant", bubbles: { quant: "Sampel belum cukup" } },
-  { round: "R6 · Tinjauan risiko", bubbles: { risk: "Ukuran posisi dihitung" } },
-  { round: "R7 · Keputusan", bubbles: { fund_manager: "TUNGGU KONFIRMASI" }, badge: "TUNGGU" },
+  { round: "R5 · Validasi kuant", bubbles: { quant: "Sampel belum cukup" }, links: [["quant", "fund_manager", "quant_validation"]] },
+  { round: "R6 · Tinjauan risiko", bubbles: { risk: "Ukuran posisi dihitung" }, links: [["risk", "fund_manager", "risk_review"]] },
+  { round: "R7 · Keputusan", bubbles: { fund_manager: "TUNGGU KONFIRMASI" }, badge: "TUNGGU", decision: "TUNGGU KONFIRMASI" },
+  { round: "R8 · Audit tersimpan", bubbles: {} },
+  { round: "R1 · Riset independen", bubbles: { macro: "Dolar melemah", onchain: "Arus keluar bursa", flow: "OI naik tajam", technical: "Breakout 1D" }, links: toTable() },
+  { round: "R3 · Tantangan", bubbles: { critic: "Stop di mana?", technical: "Di bawah swing low" }, table: true, links: [["critic", "technical", "challenge"], ["technical", "critic", "reply"]] },
+  { round: "R5 · Validasi kuant", bubbles: { quant: "Hasil uji dicatat" }, links: [["quant", "fund_manager", "quant_validation"]] },
+  { round: "R6 · Tinjauan risiko", bubbles: { risk: "Risiko 4,1% > plafon 3%" }, links: [["risk", "fund_manager", "veto"]], veto: true, badge: "VETO" },
+  { round: "R7 · Keputusan", bubbles: { fund_manager: "Veto tidak bisa dibatalkan" }, badge: "TIDAK TRADING", decision: "TIDAK TRADING" },
   { round: "R8 · Audit tersimpan", bubbles: {} },
 ];
 
 function useDemoFloor() {
   const reduce = useReducedMotion();
   const [beat, setBeat] = useState(0);
+  const [beatAt, setBeatAt] = useState(() => Date.now());
   const [candles, setCandles] = useState<WallCandle[]>(() => {
     let p = 100;
     return Array.from({ length: 48 }, (_, i) => {
@@ -39,21 +52,27 @@ function useDemoFloor() {
     if (reduce) return;
     const t = window.setInterval(() => {
       setBeat((b) => (b + 1) % SCRIPT.length);
+      setBeatAt(Date.now());
       setNow(new Date());
       setCandles((cs) => {
         const last = cs[cs.length - 1].c;
         const c = last * (1 + (Math.random() - 0.47) * 0.012);
         return [...cs.slice(1), { o: last, c, h: Math.max(last, c) * 1.003, l: Math.min(last, c) * 0.997 }];
       });
-    }, 2200);
+    }, 2600);
     return () => window.clearInterval(t);
   }, [reduce]);
   const b = SCRIPT[beat];
-  const agents: Record<string, FloorAgent> = useMemo(() => Object.fromEntries(AGENTS.map((a) => {
+  const agents: Record<string, OfficeAgent> = useMemo(() => Object.fromEntries(AGENTS.map((a) => {
     const text = b.bubbles[a.role];
-    return [a.role, { state: text ? "analyzing" : beat === SCRIPT.length - 1 ? "completed" : "idle", active: !!text, bubble: text ?? null }];
-  })), [b, beat]);
-  return { agents, candles, round: b.round, badge: b.badge, clock: now.toTimeString().slice(0, 5), beat };
+    const state = a.role === "risk" && b.veto ? "veto" : text ? "analyzing" : b.round.startsWith("R8") ? "completed" : "idle";
+    return [a.role, { state, active: !!text, bubble: text ?? null, atTable: !!b.table && (ANALYSTS.includes(a.role) || a.role === "critic") }];
+  })), [b]);
+  const links: CommLink[] = useMemo(() => (b.links ?? []).map(([from, to, kind], i) => ({ id: `${beat}-${i}-${beatAt}`, from, to, kind, at: beatAt + i * 350 })), [b, beat, beatAt]);
+  return {
+    agents, links, candles, round: b.round, badge: b.badge, clock: now.toTimeString().slice(0, 5), beat,
+    vetoAt: b.veto ? beatAt : null, decision: b.decision ? { text: b.decision, at: beatAt } : null,
+  };
 }
 
 const STEPS = [
@@ -113,8 +132,11 @@ export default function Landing({ loggedIn }: { loggedIn: boolean }) {
             </div>
           </motion.div>
           <motion.div {...fade(0.1)}>
-            <TradingFloor agents={demo.agents} candles={demo.candles} wallLabel={demo.round} wallBadge={demo.badge ?? "ILUSTRASI"} clock={demo.clock}
-              caption="Ilustrasi animasi satu siklus debat. Bukan data pasar dan bukan hasil trading." />
+            <Office3D lang="id" agents={demo.agents} links={demo.links} candles={demo.candles} wallLabel="ILUSTRASI · bukan data pasar" wallBadge={demo.badge ?? "ILUSTRASI"}
+              roundLabel={demo.round} vetoAt={demo.vetoAt} decision={demo.decision} controls="lite" height={460} compact
+              fallback={<TradingFloor agents={demo.agents} candles={demo.candles} wallLabel={demo.round} wallBadge={demo.badge ?? "ILUSTRASI"} clock={demo.clock}
+                caption="Ilustrasi animasi satu siklus debat. Bukan data pasar dan bukan hasil trading." />}
+              caption="Ilustrasi animasi 3D dua siklus debat (termasuk satu veto risiko). Bukan data pasar dan bukan hasil trading." />
           </motion.div>
         </section>
 

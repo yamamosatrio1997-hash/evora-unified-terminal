@@ -326,3 +326,56 @@ table.t tr:hover td { background: rgba(18, 25, 37, 0.6); }
   .site-nav { gap: 8px; padding: 10px 12px; }
   .site-nav .logo span { display: none; }
 }
+
+/* ================= 3D office ================= */
+.o3-wrap { position: relative; }
+.o3-flat > .o3-toggle { position: absolute; top: 10px; right: 10px; z-index: 5; }
+.o3-stage { position: relative; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #070b14; }
+.o3-canvas { position: absolute !important; inset: 0; }
+.o3-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.o3-hud { position: absolute; z-index: 4; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+.o3-hud > * { pointer-events: auto; }
+.o3-hud-tl { top: 10px; left: 10px; align-items: flex-start; }
+.o3-hud-tr { top: 10px; right: 10px; align-items: flex-end; }
+.o3-hud-bl { bottom: 10px; left: 10px; max-width: 60%; }
+.o3-hud-br { bottom: 10px; right: 10px; align-items: flex-end; max-width: 38%; }
+.o3-chip-round { font-family: "Silkscreen", var(--mono); font-size: 11px; color: #e9d5ff; background: #1e1b4bcc; border: 1px solid #7c3aed88; padding: 5px 9px; border-radius: 6px; }
+.o3-badge { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--warn); border: 1px solid #f5b85b66; background: #00000088; padding: 2px 7px; border-radius: 4px; }
+.o3-queue { color: #a5f3fc; border-color: #22d3ee66; }
+.o3-toggle, .o3-views { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.o3-toggle button, .o3-views button { font: 500 11px var(--sans); color: var(--muted); background: #0b1220d9; border: 1px solid var(--line-2); padding: 5px 9px; border-radius: 6px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.o3-toggle button:hover, .o3-views button:hover { color: var(--text); }
+.o3-toggle button.on, .o3-views button.on { color: var(--accent); border-color: var(--accent); background: #0b1f22e6; }
+.o3-agents { display: flex; flex-wrap: wrap; gap: 4px; }
+.o3-agent { display: inline-flex; align-items: center; gap: 5px; font: 11px "Silkscreen", var(--mono); color: var(--text); background: #0b1220d9; border: 1px solid var(--line-2); padding: 4px 7px; border-radius: 6px; cursor: pointer; }
+.o3-agent i { width: 8px; height: 8px; background: var(--agent); display: inline-block; }
+.o3-agent.on { border-color: var(--agent); box-shadow: 0 0 10px color-mix(in srgb, var(--agent) 40%, transparent); }
+.o3-agent.on i { animation: o3blink 0.6s steps(2) infinite; }
+.o3-agent.sel { outline: 1px solid #fff; }
+.o3-agent:focus-visible { outline: 2px solid var(--agent); }
+.o3-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; font-size: 10.5px; color: var(--muted); background: #0b1220c0; padding: 5px 8px; border-radius: 6px; }
+.o3-legend i { display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
+.o3-hint { font-size: 10.5px; color: var(--faint); }
+.o3-name { font: 11px "Silkscreen", var(--mono); color: #cbd5e1; background: #0b1220d0; border: 1px solid #334155; padding: 1px 6px; border-radius: 4px; white-space: nowrap; user-select: none; }
+.o3-name.on { color: var(--agent); border-color: var(--agent); }
+.o3-bubble { font: 11px "Silkscreen", var(--mono); color: #0b1020; background: #f8fafc; padding: 4px 8px; border-radius: 5px; white-space: nowrap; box-shadow: 0 0 0 2px var(--agent), 3px 3px 0 #00000066; position: relative; animation: pop 0.25s steps(3, end); user-select: none; }
+.o3-bubble::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 8px; height: 8px; background: #f8fafc; transform: translateX(-50%) rotate(45deg); }
+.o3-tip { font-size: 11px; color: var(--text); background: #0b1220f0; border: 1px solid var(--agent); padding: 6px 9px; border-radius: 6px; white-space: nowrap; }
+.o3-tip b { color: var(--agent); font-family: "Silkscreen", var(--mono); font-weight: 400; }
+.o3-tip span { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+.o3-room { font: 10px "Silkscreen", var(--mono); color: var(--room); opacity: 0.85; letter-spacing: 0.06em; white-space: nowrap; text-shadow: 0 0 8px #000; user-select: none; }
+.o3-wall { font: 11px "Silkscreen", var(--mono); color: #a5f3fc; white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+.o3-wall span { color: var(--warn); border: 1px solid #f5b85b66; padding: 0 5px; }
+.o3-round { font: 12px "Silkscreen", var(--mono); color: #f5f3ff; background: #4c1d95cc; border: 1px solid #c084fc; padding: 3px 9px; border-radius: 5px; white-space: nowrap; box-shadow: 0 0 18px #c084fc66; }
+.o3-veto { font: 26px "Silkscreen", var(--mono); color: #fff; background: #b91c1c; padding: 4px 14px; border-radius: 6px; box-shadow: 0 0 30px #f87171; animation: o3shake 0.35s steps(4) 3; }
+.o3-decision { font: 13px "Silkscreen", var(--mono); color: #1c1917; background: #fde68a; padding: 5px 11px; border-radius: 6px; white-space: nowrap; box-shadow: 0 0 24px #fde68a99; animation: pop 0.3s steps(3, end); }
+@keyframes o3blink { 50% { opacity: 0.2; } }
+@keyframes o3shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@media (max-width: 760px) {
+  .o3-hud-br { display: none; }
+  .o3-hud-bl { max-width: calc(100% - 20px); }
+  .o3-views button { padding: 4px 6px; font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .o3-agent.on i, .o3-veto, .o3-bubble, .o3-decision { animation: none !important; }
+}

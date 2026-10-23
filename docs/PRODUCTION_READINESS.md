@@ -7,12 +7,12 @@ Date: 2026-10-23. **Verdict: not production-ready for trading decisions, and liv
 | Area | Evidence |
 |---|---|
 | Backend unit + integration tests | **122 passed, 0 failed** (pytest against real PostgreSQL 16 locally; CI uses 17) |
-| Frontend | `tsc --noEmit` clean, production build succeeds, 2 vitest tests pass |
+| Frontend | `tsc --noEmit` clean, production build succeeds, 6 vitest tests pass |
 | Lint | `ruff` (E, F, W, B) clean |
 | Migrations | upgrade → downgrade → upgrade round-trip; `alembic check` shows no drift |
 | Docker Compose stack | built and run locally: postgres 17, backend, nginx frontend, n8n 2.44.6, all healthy |
 | n8n | all 8 workflows imported into real n8n 2.44.6. Workflows 01 (ingest → paper mark → callback) and 05 (health → IF → alert → callback) **executed end-to-end** against the backend, and both executions were recorded |
-| Homepage + dashboard (end-to-end) | Playwright, 34 checks, all passing, zero console errors: homepage renders and its illustration animates, anchors and FAQ work, mobile has no overflow; signup validation, signup → auto-login as viewer, viewer redaction, logout, auth guard, wrong-password error; admin navigates all 12 pages; the live trading floor reacts to a real debate and settles afterwards; desk → drawer; tabs; Run debate, Run backtest, risk calculator, emergency stop engage/release, mark to market, ingestion, settings save, audit-chain verify |
+| Homepage + dashboard (end-to-end) | Playwright with software WebGL (SwiftShader), 39 checks, all passing, zero console errors: homepage 3D office renders and its illustration animates, the 2D fallback toggle works, anchors and FAQ work, mobile has no overflow; signup validation, signup → auto-login as viewer, viewer redaction, logout, auth guard, wrong-password error; admin navigates all 12 pages; the live 3D office reacts to a real debate (paced replay shown) and settles afterwards; employee chip → drawer; camera presets; 2D floor desk → drawer; tabs; Run debate, Run backtest, risk calculator, emergency stop engage/release, mark to market, ingestion, settings save, audit-chain verify |
 | Restart/recovery | postgres restart, backend restart and full `down`/`up` with volumes kept: data intact, audit chain verifies, n8n workflows persist |
 
 ### Acceptance criteria (section 13)
@@ -64,7 +64,8 @@ Date: 2026-10-23. **Verdict: not production-ready for trading decisions, and liv
 5. **Paper fills**: market fills at the latest 1h close plus 5 bps slippage, a 10%-of-bar-volume liquidity cap, and stops checked on closed 1h bars. Paper results will look better than live in fast markets.
 6. **Rate limiters are per process** (2 uvicorn workers).
 7. **Confidence scores are heuristic** and are not calibrated probabilities; this is labelled in the UI.
-8. n8n 2.x prints a warning about the missing Python task runner. It is harmless here because the workflows use no Code nodes.
+8. **3D office performance** was only measured with software rendering (SwiftShader, no GPU): 2–10 fps, usable but not smooth. It has not been measured on real GPUs or low-end phones. On touch devices the homepage scene disables orbit controls so the page still scrolls. The 2D floor is the fallback.
+9. n8n 2.x prints a warning about the missing Python task runner. It is harmless here because the workflows use no Code nodes.
 
 ## Estimated running costs (assumptions; verify current prices)
 
