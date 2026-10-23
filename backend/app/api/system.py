@@ -169,22 +169,39 @@ def svc_debate(body: DebateIn, background: BackgroundTasks, p: OperatorOrService
 class BacktestJobIn(BaseModel):
     strategies: list[str] = Field(default_factory=lambda: ["ema_trend", "rsi_mean_reversion", "donchian_breakout"])
     interval: str = "4h"
+    # False: run in the background and return 202 at once (for callers with short execution limits, e.g. n8n Cloud).
+    wait: bool = True
 
 
-@router.post("/service/backtest")
-def svc_backtest(body: BacktestJobIn, db: DB, p: OperatorOrService) -> list[dict[str, Any]]:
-    from app.core.locks import LockHeld, job_lock
+def _run_scheduled_backtests(strategies: list[str], interval: str, actor: str) -> list[dict[str, Any]]:
+    from app.core.locks import job_lock
     from app.quant.service import run_backtest_job, summarize_run
 
     out = []
+    with job_lock("scheduled-backtest", actor, 3600), session_scope() as db:
+        for sym in get_settings().symbols:
+            for strat in strategies:
+                out.append(summarize_run(run_backtest_job(db, strat, sym, interval)))
+    return out
+
+
+@router.post("/service/backtest", response_model=None)
+def svc_backtest(body: BacktestJobIn, background: BackgroundTasks, p: OperatorOrService) -> list[dict[str, Any]] | JSONResponse:
+    from app.core.locks import LockHeld
+
+    if not body.wait:
+        def bg() -> None:
+            try:
+                _run_scheduled_backtests(body.strategies, body.interval, p.actor)
+            except LockHeld:
+                pass
+
+        background.add_task(bg)
+        return JSONResponse({"status": "accepted"}, status_code=202)
     try:
-        with job_lock("scheduled-backtest", p.actor, 3600):
-            for sym in get_settings().symbols:
-                for strat in body.strategies:
-                    out.append(summarize_run(run_backtest_job(db, strat, sym, body.interval)))
+        return _run_scheduled_backtests(body.strategies, body.interval, p.actor)
     except LockHeld:
         raise HTTPException(409, "backtest job already running") from None
-    return out
 
 
 @router.post("/service/paper/mark")

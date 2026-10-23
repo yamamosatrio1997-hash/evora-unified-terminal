@@ -259,3 +259,28 @@ def test_telegram_ids_masked(client, db):
     rows = client.get("/api/telegram/status").json()["requests"]
     assert rows[0]["user_id"] == "•••789"
     assert "123456789" not in json.dumps(rows)
+
+
+def test_service_backtest_async_and_sync(client, monkeypatch):
+    from app.api import system
+    from app.core.locks import LockHeld
+
+    calls = []
+
+    def fake(strategies, interval, actor):
+        calls.append((tuple(strategies), interval))
+        return [{"strategy": strategies[0]}]
+
+    monkeypatch.setattr(system, "_run_scheduled_backtests", fake)
+    r = client.post("/api/service/backtest", headers=SERVICE, json={"interval": "4h", "strategies": ["ema_trend"], "wait": False})
+    assert r.status_code == 202 and r.json() == {"status": "accepted"}
+    assert calls == [(("ema_trend",), "4h")]  # TestClient runs background tasks before returning
+    r = client.post("/api/service/backtest", headers=SERVICE, json={"strategies": ["ema_trend"]})
+    assert r.status_code == 200 and r.json() == [{"strategy": "ema_trend"}]
+
+    def busy(*_):
+        raise LockHeld("scheduled-backtest")
+
+    monkeypatch.setattr(system, "_run_scheduled_backtests", busy)
+    assert client.post("/api/service/backtest", headers=SERVICE, json={}).status_code == 409
+    assert client.post("/api/service/backtest", headers=SERVICE, json={"wait": False}).status_code == 202
