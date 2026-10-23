@@ -71,6 +71,8 @@ class Settings(BaseSettings):
     http_timeout_seconds: float = 10.0
     http_max_retries: int = 3
     watch_symbols: str = "BTCUSDT,ETHUSDT"
+    # Exchange prefix for TradingView tickers pushed by n8n (e.g. BINANCE:BTCUSDT).
+    tradingview_exchange: str = "BINANCE"
 
     # --- LLM ------------------------------------------------------------------
     llm_provider: Literal["anthropic", "none"] = "none"

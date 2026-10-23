@@ -4,6 +4,7 @@
 
 | Source | Endpoints used | Key | Notes and limits (check current docs) |
 |---|---|---|---|
+| TradingView (primary, push) | MCP `get_ohlcv`, `get_symbol_data_batch` at `mcp.tradingview.com/mcp`, called by n8n | OAuth on the n8n MCP credential; the backend holds no TradingView secret | n8n posts the raw results to `POST /api/service/ingest/tradingview` (service token). Candles `BINANCE:<symbol>` 1h/4h/1D; the still-forming bar is dropped. Quotes: price and 24h change (`BINANCE:<symbol>`), market cap and 24h volume (`CRYPTO:<base>USD`; volume is derived as `24h_vol_to_market_cap * market_cap_calc` and labelled so), `CRYPTOCAP:TOTAL`, `TVC:US10Y`, `TVC:US02Y`. BTC dominance is read from the latest `CRYPTOCAP:BTC.D` OHLCV bar, because in live testing the screener returned BTC's price for that ticker; every metric has a plausibility range and out-of-range values are rejected. Quotes whose `update_mode` is not `streaming` are stored as `delayed`. Real-time depends on the TradingView plan. Check TradingView's terms before showing its data to users other than yourself. |
 | Binance spot (market data) | `GET /api/v3/klines` on `data-api.binance.vision` | none | Request weight counted per minute (header `x-mbx-used-weight-1m` is recorded). 429 means back off; 418 means the IP is banned, so the adapter does not retry. 451 means a restricted region. The still-forming candle is dropped. |
 | Binance USDⓈ-M futures | `GET /fapi/v1/premiumIndex`, `GET /fapi/v1/openInterest` | none | Funding rate (last), mark price, open interest. Funding values with magnitude ≥ 5% are rejected as implausible. |
 | CoinGecko | `GET /simple/price`, `GET /global` | optional demo key (`x-cg-demo-api-key`) | Keyless access is heavily rate limited; the hourly schedule keeps usage low. Check the license terms for display and attribution. |
@@ -14,7 +15,9 @@
 
 ## Storage and quality
 
-Every row stores its source, asset, metric, value, unit, observation time, retrieval time, timeframe and quality (`ok` / `simulated`). Duplicates are ignored by unique constraints. Freshness thresholds: point metrics after `DATA_STALE_AFTER_SECONDS` (900 s); daily after 4 days; weekly after 10; monthly after 75, because CPI is published weeks after its period. Candles go stale after 2 intervals plus 2 minutes.
+Candles come from TradingView while its series is fresh and fall back to the freshest other real source (Binance spot) when it goes stale; a metric series never mixes sources. Funding, open interest and perpetual mark price stay on Binance futures, and FRED, DefiLlama and Fear & Greed stay on their own sources, because TradingView either lacks them or measures something different (DXY is not the Fed broad USD index).
+
+Every row stores its source, asset, metric, value, unit, observation time, retrieval time, timeframe and quality (`ok` / `delayed` / `simulated`). Duplicates are ignored by unique constraints. Freshness thresholds: point metrics after `DATA_STALE_AFTER_SECONDS` (900 s); daily after 4 days; weekly after 10; monthly after 75, because CPI is published weeks after its period. Candles go stale after 2 intervals plus 2 minutes.
 
 ## Known gaps (no free, verified source configured)
 

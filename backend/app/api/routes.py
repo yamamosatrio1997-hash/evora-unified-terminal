@@ -23,6 +23,7 @@ from app.db.models import (
     BacktestRun,
     Decision,
     LlmCall,
+    MarketObservation,
     PaperOrder,
     PaperPosition,
     RiskDecision,
@@ -230,7 +231,22 @@ def candles(db: DB, p: Viewer, symbol: str = "BTCUSDT", interval: Literal["1h", 
         "volatility": {"atr14_pct": nan(ind.atr(b.high, b.low, b.close, 14)[-1] / b.close[-1]),
                        "realized_vol_annual": nan(ind.realized_vol(b.close, 30, 31536000 / INTERVAL_SECONDS[interval])[-1])},
         "markers": markers,
+        "quote": _latest_quote(db, symbol.upper()),
     }
+
+
+def _latest_quote(db: Any, symbol: str) -> dict[str, Any] | None:
+    """Newest TradingView quote for the symbol's base asset, labelled real time only if TradingView streamed it."""
+    from app.data.snapshot import base_asset
+
+    q = db.scalars(select(MarketObservation).where(
+        MarketObservation.asset == base_asset(symbol), MarketObservation.metric == "price", MarketObservation.source == "tradingview",
+    ).order_by(MarketObservation.observed_at.desc()).limit(1)).first()
+    if q is None or q.value is None:
+        return None
+    age = (utcnow() - q.observed_at).total_seconds()
+    return {"price": float(q.value), "source": q.source, "observed_at": q.observed_at.isoformat(), "age_seconds": round(age),
+            "realtime": q.quality == "ok" and age <= 600, "update_mode": (q.meta or {}).get("update_mode")}
 
 
 @router.get("/market/context")

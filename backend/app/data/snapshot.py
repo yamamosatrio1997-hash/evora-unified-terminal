@@ -67,22 +67,42 @@ def base_asset(symbol: str) -> str:
 
 
 def _series(db: Session, asset: str, metric: str, n: int) -> list[MarketObservation]:
+    """Newest-first window of one metric from ONE source (the source of the newest point)."""
+    newest = db.scalars(
+        select(MarketObservation.source)
+        .where(MarketObservation.asset == asset, MarketObservation.metric == metric)
+        .order_by(MarketObservation.observed_at.desc()).limit(1)
+    ).first()
+    if newest is None:
+        return []
     rows = db.scalars(
         select(MarketObservation)
-        .where(MarketObservation.asset == asset, MarketObservation.metric == metric)
+        .where(MarketObservation.asset == asset, MarketObservation.metric == metric, MarketObservation.source == newest)
         .order_by(MarketObservation.observed_at.desc())
         .limit(n)
     ).all()
     return list(reversed(rows))
 
 
+# Primary market-data source first. A source is used only while it is fresh; otherwise the
+# freshest real source is used and named in the snapshot. Sources are never interleaved.
+CANDLE_SOURCE_PRIORITY = ("tradingview", "binance")
+
+
 def preferred_candle_source(db: Session, symbol: str, interval: str) -> str | None:
     """Real exchange data wins over synthetic; sources are never interleaved."""
-    sources = set(db.scalars(select(Candle.source).where(Candle.symbol == symbol, Candle.interval == interval).distinct()))
-    real = sorted(sources - {"synthetic"})
+    latest = dict(db.execute(
+        select(Candle.source, func.max(Candle.close_time))
+        .where(Candle.symbol == symbol, Candle.interval == interval).group_by(Candle.source)
+    ).all())
+    real = {k: v for k, v in latest.items() if k != "synthetic"}
     if real:
-        return real[0]
-    return "synthetic" if "synthetic" in sources else None
+        now = utcnow()
+        for src in CANDLE_SOURCE_PRIORITY:
+            if src in real and not candle_is_stale(real[src], interval, now):
+                return src
+        return max(real, key=lambda k: (real[k], k))
+    return "synthetic" if "synthetic" in latest else None
 
 
 def latest_candles(db: Session, symbol: str, interval: str, n: int = 300, source: str | None = None) -> list[Candle]:

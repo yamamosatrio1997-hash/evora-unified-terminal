@@ -129,6 +129,50 @@ def svc_ingest(body: IngestIn, db: DB, p: OperatorOrService) -> dict[str, Any]:
     return run_ingestion(db, body.sources or None)
 
 
+class TVSeriesIn(BaseModel):
+    symbol: str = Field(max_length=20)
+    tv_symbol: str = Field(max_length=40)
+    interval: str = Field(max_length=4)
+    bars: list[dict[str, Any]] = Field(default_factory=list, max_length=1000)
+
+
+class TVQuoteIn(BaseModel):
+    tv_symbol: str = Field(max_length=40)
+    close: float | None = None
+    change: float | None = None
+    market_cap_calc: float | None = None
+    vol_to_market_cap: float | None = None  # TradingView column 24h_vol_to_market_cap
+    update_mode: str | None = Field(None, max_length=40)
+
+
+class TVIndexIn(BaseModel):
+    tv_symbol: str = Field(max_length=40)
+    bars: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
+
+
+class TVPushIn(BaseModel):
+    series: list[TVSeriesIn] = Field(default_factory=list, max_length=20)
+    quotes: list[TVQuoteIn] = Field(default_factory=list, max_length=60)
+    indices: list[TVIndexIn] = Field(default_factory=list, max_length=10)
+
+
+@router.post("/service/ingest/tradingview")
+def svc_ingest_tradingview(body: TVPushIn, db: DB, p: Service) -> dict[str, Any]:
+    """TradingView data fetched by n8n through the TradingView MCP server (n8n holds the OAuth link)."""
+    from app.data.ingest import record_push
+    from app.data.sources import tradingview
+
+    now = utcnow()
+    batches = [tradingview.parse_series(s.model_dump(), now) for s in body.series]
+    if body.quotes:
+        batches.append(tradingview.parse_quotes([q.model_dump() for q in body.quotes], now))
+    if body.indices:
+        batches.append(tradingview.parse_indices([i.model_dump() for i in body.indices], now))
+    if not batches:
+        raise HTTPException(422, "nothing to ingest")
+    return record_push(db, tradingview.SOURCE, batches)
+
+
 class DebateIn(BaseModel):
     symbol: str = "BTCUSDT"
     idempotency_key: str | None = Field(None, max_length=120)

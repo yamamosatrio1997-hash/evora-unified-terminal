@@ -90,7 +90,8 @@ export function LiveFloor({ agents, onSelect, decision }: { agents: AgentStatus[
     const stop = window.setTimeout(() => { window.clearInterval(t); setNow(Date.now()); }, DECISION_MS + 600);
     return () => { window.clearInterval(t); window.clearTimeout(stop); };
   }, [latest]);
-  const candles = useApi<{ rows: { open: number; high: number; low: number; close: number }[]; status: string }>("/market/candles?symbol=BTCUSDT&interval=4h&limit=60", 60000);
+  const candles = useApi<{ rows: { open: number; high: number; low: number; close: number }[]; status: string; source: string | null;
+    quote?: { price: number; realtime: boolean; age_seconds: number } | null }>("/market/candles?symbol=BTCUSDT&interval=4h&limit=60", 30000);
   const byRole = Object.fromEntries(agents.map((a) => [a.role, a]));
 
   const lastAt: Record<string, number> = {};
@@ -134,13 +135,18 @@ export function LiveFloor({ agents, onSelect, decision }: { agents: AgentStatus[
   const status = candles.data?.status;
   const badge = status === "simulated" ? "SIMULATED" : status === "stale" ? "STALE" : status === "unavailable" || !rows.length ? "NO DATA" : undefined;
   const clock = new Date(now).toISOString().slice(11, 16) + "Z";
+  const SOURCE_NAME: Record<string, string> = { tradingview: "TradingView", binance: "Binance", synthetic: "synthetic" };
+  const src = candles.data?.source ? SOURCE_NAME[candles.data.source] ?? candles.data.source : null;
+  const q = candles.data?.quote;
+  const quoteText = q ? ` · ${q.price.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${q.realtime ? "LIVE" : `DELAYED ${Math.round(q.age_seconds / 60)}m`}` : "";
+  const wallBase = `BTCUSDT · 4H${src ? ` · ${src}` : ""}${quoteText}`;
   const flat = (
-    <TradingFloor agents={floor} candles={wall} wallLabel={`BTCUSDT · 4H${decision ? ` · last decision: ${decision}` : ""}`} wallBadge={badge}
+    <TradingFloor agents={floor} candles={wall} wallLabel={`${wallBase}${decision ? ` · last decision: ${decision}` : ""}`} wallBadge={badge}
       clock={clock} onSelect={onSelect}
       caption="Live view. Mascots move only when the backend emits an event for that agent. Click a desk for its latest analysis." />
   );
   return (
-    <Office3D lang="en" agents={office} links={links} candles={wall} wallLabel={`BTCUSDT · 4H${decision ? ` · last: ${decision}` : ""}`} wallBadge={badge}
+    <Office3D lang="en" agents={office} links={links} candles={wall} wallLabel={`${wallBase}${decision ? ` · last: ${decision}` : ""}`} wallBadge={badge}
       roundLabel={running && roundP ? `R${round} · ${String(roundP.ev.payload.name ?? "").replace(/_/g, " ")}` : null}
       queued={queued}
       decision={finished ? { text: `Decision: ${String(finished.ev.payload.decision)}`, at: finished.at } : null}

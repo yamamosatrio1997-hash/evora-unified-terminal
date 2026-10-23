@@ -118,3 +118,31 @@ def run_ingestion(db: Session, sources: list[str] | None = None, fetcher: HttpFe
         if own:
             fetcher.close()
     return summary
+
+
+def record_push(db: Session, source: str, batches: list[SourceBatch]) -> dict[str, Any]:
+    """Persist batches pushed by an orchestrator (no fetch step) and update source health."""
+    h = _health(db, source)
+    now = utcnow()
+    new_c = new_o = 0
+    rejected: list[str] = []
+    for b in batches:
+        c, o = persist_batch(db, b)
+        new_c += c
+        new_o += o
+        rejected.extend(b.rejected)
+    received = sum(len(b.candles) + len(b.observations) for b in batches)
+    if received == 0 and rejected:
+        h.consecutive_failures = (h.consecutive_failures or 0) + 1
+        h.status = "down" if h.consecutive_failures >= 3 else "degraded"
+    else:
+        h.consecutive_failures = 0
+        h.status = "degraded" if rejected else "ok"
+        h.last_success_at = now
+    h.updated_at = now
+    if rejected:
+        h.last_error, h.last_error_at = f"{len(rejected)} rows rejected; first: {rejected[0]}", now
+    emit(db, "data.ingested", source=source, new_candles=new_c, new_observations=new_o, rejected=len(rejected))
+    db.flush()
+    return {"status": h.status, "new_candles": new_c, "new_observations": new_o,
+            "rejected": len(rejected), "rejected_samples": rejected[:5]}

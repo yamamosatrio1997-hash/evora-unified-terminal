@@ -76,7 +76,7 @@ Instead of the eight self-hosted workflows, the schedule can run from an n8n Clo
 
 - n8n Cloud caps executions at 180 s, so the executor starts debates (`wait: false`) and backtests (`"wait": false`, returns 202) in the background. Both stay idempotent and lock-protected in the backend.
 - Set `apiBaseUrl` once in the **Odin config** node and attach one credential (`Authorization: Bearer <SERVICE_TOKEN>`) to its HTTP nodes. The backend must be reachable from the internet over HTTPS (Caddy `tls` profile).
-- The agent has seven scheduled tasks matching the table above, and a read-only TradingView MCP connection for live market answers in chat. TradingView data is informational only and is not fed into the backend debate snapshot.
+- The agent has seven scheduled tasks matching the table above, and a read-only TradingView MCP connection for live market answers in chat. The workflow's market job also calls the TradingView MCP (`get_ohlcv` and `get_symbol_data_batch`) and pushes the results to `POST /api/service/ingest/tradingview`, so TradingView is the primary candle and quote source of the debate snapshot. In n8n, create one MCP OAuth2 credential for `https://mcp.tradingview.com/mcp` and assign it to the three TradingView MCP Client nodes and to the agent's `tradingview` server.
 - Each scheduled task is one LLM call. With a small model this is roughly 350 calls a day, so keep the agent's monthly budget guardrail on.
 
 To test one workflow from the CLI, use a separate broker port so it doesn't collide with the running instance:
