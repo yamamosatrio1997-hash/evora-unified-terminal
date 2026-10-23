@@ -7,6 +7,7 @@ and its text cannot alter it.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from app.agents.base import Agent, DebateContext, load_prompt
@@ -92,14 +93,21 @@ class FundManager(Agent):
             metrics={"decision": d},
         )
         if ctx.llm.enabled:
-            _, common = load_prompt("common")
             _, persona = load_prompt("fund_manager")
             try:
                 raw = ctx.llm.complete_json(ctx.db, agent=self.role, prompt_version=self.prompt_version, system=persona,
                                             user=json.dumps({"decision": d, "agents": {r: a.conclusion for r, a in ctx.outputs.items()}}, default=str)[:12000],
                                             budget=ctx.budget, session_id=ctx.session_id)
-                if isinstance(raw.get("rationale"), str):
-                    out.metrics["llm_rationale"] = raw["rationale"][:2000]
+                text = raw.get("rationale")
+                others = {"LONG", "SHORT", "WATCHLIST", "WAIT FOR CONFIRMATION", "REJECT", "NO TRADE"} - {d["decision"]}
+                upper = text.upper().replace(d["decision"], "") if isinstance(text, str) else ""
+                if not isinstance(text, str):
+                    out.errors.append("LLM rationale missing")
+                elif any(re.search(rf"\b{w}\b", upper) for w in others):
+                    # Wording that names a different decision would mislead readers; discard it.
+                    out.errors.append("LLM rationale discarded: it referenced a decision other than the gate's")
+                else:
+                    out.metrics["llm_rationale"] = text[:2000]
                     out.llm_used, out.model = True, ctx.llm.model
             except (BudgetExceeded, LLMUnavailable) as e:
                 out.errors.append(f"LLM rationale skipped: {e}")

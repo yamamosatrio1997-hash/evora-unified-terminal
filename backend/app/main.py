@@ -21,9 +21,12 @@ async def lifespan(app: FastAPI):
     configure_logging(s.log_level)
     log.info("starting", extra={"ctx": {"env": s.app_env, "live_trading": s.live_trading_enabled, "llm": s.llm_enabled}})
     if s.app_env != "test":
-        from app.cli import bootstrap_admin
+        from app.cli import abort_orphaned_debates, bootstrap_admin
 
         log.info(bootstrap_admin())
+        n = abort_orphaned_debates()
+        if n:
+            log.warning("aborted orphaned debates", extra={"ctx": {"count": n}})
     yield
 
 

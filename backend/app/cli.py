@@ -6,7 +6,7 @@ import json
 import sys
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.config import get_settings
 from app.core.audit import audit
@@ -21,6 +21,8 @@ def bootstrap_admin() -> str:
 
     s = get_settings()
     with session_scope() as db:
+        # Several workers start at once; serialize so only one creates the admin.
+        db.execute(text("SELECT pg_advisory_xact_lock(727002)"))
         if db.scalar(select(User.id).limit(1)):
             return "users exist; nothing to do"
         pw = s.admin_bootstrap_password.get_secret_value()
@@ -29,6 +31,23 @@ def bootstrap_admin() -> str:
         db.add(User(username=s.admin_bootstrap_user, password_hash=hash_password(pw), role="admin"))
         audit(db, "system:bootstrap", "user.created", s.admin_bootstrap_user, {"role": "admin"})
         return f"admin '{s.admin_bootstrap_user}' created"
+
+
+def abort_orphaned_debates() -> int:
+    """Debates still 'running' past the lock TTL were interrupted (crash/restart)."""
+    from datetime import timedelta
+
+    from app.core.util import utcnow
+    from app.db.models import DebateSession
+
+    with session_scope() as db:
+        rows = db.scalars(select(DebateSession).where(DebateSession.status == "running",
+                                                      DebateSession.created_at < utcnow() - timedelta(minutes=15))).all()
+        for s in rows:
+            s.status, s.final_decision, s.finished_at = "aborted", "NO TRADE", utcnow()
+            s.error = "interrupted (process restart); no decision was produced"
+            audit(db, "system:startup", "debate.aborted", str(s.id))
+        return len(rows)
 
 
 def seed_simulated(symbols: list[str], days: int = 400) -> dict:

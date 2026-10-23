@@ -6,6 +6,7 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
+from sqlalchemy.exc import DBAPIError
 
 from app.core.audit import audit, verify_chain
 from app.db.models import AuditLog, RiskDecision, User
@@ -131,11 +132,11 @@ def test_audit_chain_and_immutability(db):
     assert verify_chain(db) == (True, None)
     row = db.scalar(select(AuditLog).order_by(AuditLog.id).limit(1))
     assert row.details["api_key"] == "[REDACTED]"
-    with pytest.raises(Exception):
+    with pytest.raises(DBAPIError, match="append-only"):
         db.execute(text("UPDATE audit_logs SET action='tampered'"))
         db.flush()
     db.rollback()
-    with pytest.raises(Exception):
+    with pytest.raises(DBAPIError, match="append-only"):
         db.execute(text("DELETE FROM audit_logs"))
         db.flush()
     db.rollback()
@@ -144,7 +145,7 @@ def test_audit_chain_and_immutability(db):
 def test_risk_decisions_immutable(db):
     db.add(RiskDecision(symbol="BTCUSDT", approved=False, reasons=[], inputs={}, result={}, engine_version="t", hash="h"))
     db.commit()
-    with pytest.raises(Exception):
+    with pytest.raises(DBAPIError, match="append-only"):
         db.execute(text("UPDATE risk_decisions SET approved=true"))
         db.flush()
     db.rollback()

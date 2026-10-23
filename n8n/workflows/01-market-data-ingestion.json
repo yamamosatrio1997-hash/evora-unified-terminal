@@ -1,0 +1,192 @@
+{
+  "id": "tccMarketData001",
+  "name": "TCC 01 - Market data ingestion (5 min)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "42656da9-1ae0-5d1c-a648-aebde13e5481",
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"sources\": [\"binance\", \"binance_futures\"]}"
+      },
+      "id": "b500158a-c0f6-5534-ba9d-9a53ada12293",
+      "name": "Ingest price & derivatives data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/paper/mark",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "d39ae4aa-2b49-5154-97d2-a6c4b3876799",
+      "name": "Mark paper positions to market",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/n8n/callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow_id: $workflow.id, workflow_name: $workflow.name, execution_id: $execution.id, status: \"success\", started_at: $execution.startedAt ? $execution.startedAt : null, finished_at: $now.toISO() }) }}"
+      },
+      "id": "6e75e6ab-39f0-5d9d-9636-ee60f9851ef7",
+      "name": "Report success to backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "4ffeaa6e-ec1b-5ea5-9bb0-aa861bdd8b32",
+      "name": "Run on demand",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Every 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "Ingest price & derivatives data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ingest price & derivatives data": {
+      "main": [
+        [
+          {
+            "node": "Mark paper positions to market",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark paper positions to market": {
+      "main": [
+        [
+          {
+            "node": "Report success to backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run on demand": {
+      "main": [
+        [
+          {
+            "node": "Ingest price & derivatives data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 900,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tccErrorHandler1",
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "versionId": "2bcaf6cf-547e-5e81-898c-8c32571f6ae2"
+}

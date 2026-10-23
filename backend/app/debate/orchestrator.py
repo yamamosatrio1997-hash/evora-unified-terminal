@@ -206,6 +206,9 @@ def _run_locked(symbol: str, trigger: str, key: str, llm: LLMClient, extra: dict
                     emit(db, "agent.state", agent=ch["to"], session_id=s.id, state="exchanging", round=3)
                     text, changed = _reply(ctx, s, ch["to"], ch["issue"])
                     _msg(db, s, 3, ch["to"], "reply", text + (" [conclusion revised]" if changed else ""), to="critic", reply_to=m.id)
+                    # Return the agent to its settled state so the UI never shows phantom activity.
+                    settled = {"veto": "veto", "error": "error", "insufficient_data": "warning"}.get(ctx.outputs[ch["to"]].status, "completed")
+                    emit(db, "agent.state", agent=ch["to"], session_id=s.id, state=settled, round=3)
             _done(db, s, 3)
         with session_scope() as db:
             s = db.get(DebateSession, session_id)

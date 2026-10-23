@@ -134,4 +134,30 @@ def test_not_a_majority_vote():
 def test_no_idea_is_no_trade_or_watchlist():
     assert decide(_ctx({"technical": _out("technical", "neutral")}))["decision"] == "NO TRADE"
     assert decide(_ctx({"technical": _out("technical", "bullish")}))["decision"] == "WATCHLIST"
-    _ = timedelta
+
+
+
+def test_no_agent_left_in_active_state_after_debate(db):
+    """The UI animates from these events; a finished debate must leave no phantom activity."""
+    seed_simulated(["BTCUSDT"], days=120)
+    db.commit()
+    sid = run_debate("BTCUSDT", "test", "settle")
+    db.expire_all()
+    last: dict[str, str] = {}
+    for e in db.scalars(select(SystemEvent).where(SystemEvent.session_id == sid, SystemEvent.type == "agent.state").order_by(SystemEvent.id)):
+        last[e.agent] = e.payload["state"]
+    assert last and all(v in ("completed", "warning", "error", "veto") for v in last.values()), last
+
+
+def test_orphaned_debates_aborted_on_startup(db):
+    from app.cli import abort_orphaned_debates
+    from app.data.snapshot import build_snapshot
+
+    snap = build_snapshot(db, "BTCUSDT")
+    db.add(DebateSession(symbol="BTCUSDT", snapshot_id=snap.id, status="running", trigger="t", idempotency_key="orphan",
+                         max_rounds=8, created_at=utcnow() - timedelta(hours=1)))
+    db.commit()
+    assert abort_orphaned_debates() == 1
+    db.expire_all()
+    s = db.scalar(select(DebateSession).where(DebateSession.idempotency_key == "orphan"))
+    assert s.status == "aborted" and s.final_decision == "NO TRADE"
