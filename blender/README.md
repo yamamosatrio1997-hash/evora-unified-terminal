@@ -65,3 +65,7 @@ Tambahkan entri di `assets` pada JSON, lalu jalankan ulang script:
 kedalaman 8 m pada sumbu Y). `rot` dalam derajat; pada `rot: 0` bagian depan aset
 menghadap -Y (ke arah depan diorama). Zona bisa diberi `label_pos` bila labelnya
 tertutup furnitur. Tipe yang tidak dikenal dilewati dengan pesan `[skip]` di konsol.
+
+## Proyek lain di folder ini
+
+- [QUANTBOT](QUANTBOT.md): kantor 9 agen trading AI bergaya Minecraft, lengkap dengan rig jalan/duduk, Meeting Room untuk debat, dan chat bubble.
