@@ -19,3 +19,4 @@ frontend/dist/
 # runtime
 backups/
 *.log
+.netlify

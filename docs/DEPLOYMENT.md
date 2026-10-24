@@ -129,3 +129,9 @@ Recovery behaviour, verified in the build environment by restarting containers:
 git pull && docker compose build && docker compose up -d     # migrations run on start
 deploy/backup.sh                                             # always back up first
 ```
+
+## Option: frontend only on Netlify
+
+`netlify.toml` at the repo root builds `frontend/` and publishes `frontend/dist` with the same security headers as the nginx image. Netlify cannot run the FastAPI backend or Postgres, so until a backend is hosted elsewhere every `/api/*` request returns 503 with a "backend offline" message: the homepage and its labelled ILUSTRASI demo work, while login, signup and the dashboard do not. To connect a backend, replace the `/api/*` rule in `netlify.toml` with a proxy to `https://<backend-host>/api/:splat` (status 200) and set `ALLOW_SIGNUP=false` on that backend unless you have checked TradingView's display terms. Server-sent events through Netlify's proxy are not verified.
+
+In Netlify: Add new project → Import an existing project → GitHub → this repository, branch of your choice. The build settings come from `netlify.toml`.
