@@ -1,0 +1,64 @@
+{
+  "office": {"name": "QUANTBOT", "tagline": "AI Trading HQ", "fps": 24},
+
+  "owner": {"id": "BOSS", "role": "Founder",
+    "look": {"skin": "#D9A273", "hair": "#4A2E1A", "hair_style": "messy", "outfit": "beach",
+             "top": "#FF7F50", "top2": "#FFE66D", "accent": "#2EC4B6", "pants": "#3A86FF",
+             "shoes": "#8B5A2B", "sunglasses": true}},
+
+  "leads": [
+    {"id": "ATLAS",    "role": "Lead Agent", "look": {"skin": "#C68E6A", "hair": "#1C1A1A", "hair_style": "short",    "outfit": "suit",       "top": "#2F3640", "top2": "#F4F4F0", "accent": "#D4A017", "pants": "#262B33", "shoes": "#141414"}},
+    {"id": "SAGE",     "role": "Lead Agent", "look": {"skin": "#E8C09A", "hair": "#B8B8B8", "hair_style": "long",     "outfit": "cardigan",   "top": "#7FA37A", "top2": "#F2EBDD", "accent": "#5B7D57", "pants": "#4A4F57", "shoes": "#3B2A1E", "glasses": true}},
+    {"id": "CIPHER",   "role": "Lead Agent", "look": {"skin": "#A86B45", "hair": "#120E0B", "hair_style": "messy",    "outfit": "turtleneck", "top": "#1A1A1F", "top2": "#3A3A44", "accent": "#35C9FF", "pants": "#22252B", "shoes": "#0F0F10", "glasses": true}},
+    {"id": "VORTEX",   "role": "Lead Agent", "look": {"skin": "#F1C9A5", "hair": "#E0D7C8", "hair_style": "short",    "outfit": "blazer",     "top": "#2549A8", "top2": "#EDEDED", "accent": "#C9D3E8", "pants": "#1D2B4F", "shoes": "#E5E5E5"}},
+    {"id": "CHRONOS",  "role": "Lead Agent", "look": {"skin": "#8D5524", "hair": "#8A8A8A", "hair_style": "bald",     "outfit": "vest",       "top": "#6E1F2E", "top2": "#F4F0E6", "accent": "#C9A227", "pants": "#3A2A2E", "shoes": "#2A1A12", "beard": true}},
+    {"id": "ALPHA",    "role": "Lead Agent", "look": {"skin": "#D9A273", "hair": "#5A3A22", "hair_style": "ponytail", "outfit": "shirt_tie",  "top": "#8FB8DE", "top2": "#FFFFFF", "accent": "#1F3B70", "pants": "#2C3442", "shoes": "#1A1A1A"}},
+    {"id": "SENTINEL", "role": "Lead Agent", "look": {"skin": "#5C3A21", "hair": "#0E0B09", "hair_style": "short",    "outfit": "sweater",    "top": "#22304A", "top2": "#F5F5F5", "accent": "#C0392B", "pants": "#5E6670", "shoes": "#141414"}},
+    {"id": "KILLJOY",  "role": "Lead Agent", "look": {"skin": "#F3D1B5", "hair": "#1B1B1B", "hair_style": "bun",      "outfit": "polo",       "top": "#F2C230", "top2": "#FFFFFF", "accent": "#2D3436", "pants": "#2E3A48", "shoes": "#F2F2F2", "glasses": true}},
+    {"id": "ODIN",     "role": "Lead Agent", "look": {"skin": "#E0B48E", "hair": "#C9C2B8", "hair_style": "long",     "outfit": "blazer",     "top": "#3B3F46", "top2": "#1E1F22", "accent": "#B08D57", "pants": "#2B2D31", "shoes": "#3B2A1E", "beard": true}}
+  ],
+
+  "executors": [
+    {"id": "NEXUS", "role": "Trade Executor", "camp": "moderator", "look": {"skin": "#C68E6A", "hair": "#1C1A1A", "hair_style": "short",    "outfit": "suit",       "top": "#22344F", "top2": "#F4F4F0", "accent": "#C0392B", "pants": "#1E2A3D", "shoes": "#141414", "badge": true}},
+    {"id": "NOVA",  "role": "Trade Executor", "camp": "bull",      "look": {"skin": "#F1C9A5", "hair": "#6B4226", "hair_style": "short",    "outfit": "shirt_tie",  "top": "#F4F6F8", "top2": "#FFFFFF", "accent": "#1FA8C9", "pants": "#3B4A6B", "shoes": "#2A1A12", "glasses": true, "badge": true}},
+    {"id": "VEGA",  "role": "Trade Executor", "camp": "bull",      "look": {"skin": "#D9A273", "hair": "#2E1F14", "hair_style": "messy",    "outfit": "sweater",    "top": "#3E8E5E", "top2": "#F5F5F5", "accent": "#2F6B47", "pants": "#2C2C34", "shoes": "#5A5A5A", "glasses": true, "badge": true}},
+    {"id": "ORION", "role": "Trade Executor", "camp": "bear",      "look": {"skin": "#8D5524", "hair": "#141010", "hair_style": "bald",     "outfit": "vest",       "top": "#5B6168", "top2": "#E8E8E8", "accent": "#2C3E50", "pants": "#3A3E44", "shoes": "#141414", "beard": true, "badge": true}},
+    {"id": "LYRA",  "role": "Trade Executor", "camp": "bear",      "look": {"skin": "#F3D1B5", "hair": "#8E3B1F", "hair_style": "long",     "outfit": "blouse",     "top": "#E07A9B", "top2": "#C45C7E", "accent": "#FFFFFF", "pants": "#2D3557", "shoes": "#7A2E43", "badge": true}},
+    {"id": "KAI",   "role": "Trade Executor", "camp": "bull",      "look": {"skin": "#C99366", "hair": "#120E0B", "hair_style": "short",    "outfit": "polo",       "top": "#202226", "top2": "#E5B931", "accent": "#D63031", "pants": "#49536B", "shoes": "#E5E5E5", "badge": true}},
+    {"id": "SOL",   "role": "Trade Executor", "camp": "bear",      "look": {"skin": "#D7A27A", "hair": "#1A1210", "hair_style": "bun",      "outfit": "cardigan",   "top": "#C8B08A", "top2": "#F4F0E6", "accent": "#7A5C3A", "pants": "#5E5142", "shoes": "#3B2A1E", "badge": true}},
+    {"id": "REX",   "role": "Trade Executor", "camp": "neutral",   "look": {"skin": "#F0C8A0", "hair": "#E1B54A", "hair_style": "short",    "outfit": "turtleneck", "top": "#E67E22", "top2": "#B85F12", "accent": "#2D3436", "pants": "#2E3A48", "shoes": "#1F1F1F", "headset": true, "badge": true}},
+    {"id": "MIRA",  "role": "Trade Executor", "camp": "neutral",   "look": {"skin": "#A86B45", "hair": "#0F0B0A", "hair_style": "ponytail", "outfit": "blazer",     "top": "#1B8A8A", "top2": "#F4F4F0", "accent": "#0E5E5E", "pants": "#20343A", "shoes": "#141414", "glasses": true, "badge": true}}
+  ],
+
+  "desk_chatter": [
+    {"agent": "NEXUS", "frame": 20, "text": "Tim eksekusi, kumpul di Meeting Room. Kita debat BTC!"},
+    {"agent": "REX",   "frame": 70, "text": "Siap, order book sudah saya pantau."}
+  ],
+
+  "floor2_chatter": [
+    {"agent": "ATLAS",    "frame": 40,  "text": "Makro: risk-on, DXY melemah."},
+    {"agent": "BOSS",     "frame": 110, "text": "Volume naik! Drop the beat!"},
+    {"agent": "CIPHER",   "frame": 190, "text": "Model sinyal v4 sudah live."},
+    {"agent": "SENTINEL", "frame": 270, "text": "Risk limit aman, drawdown 1.2%."},
+    {"agent": "SAGE",     "frame": 350, "text": "On-chain: whale akumulasi ETH."},
+    {"agent": "VORTEX",   "frame": 430, "text": "Volatilitas SOL naik, siapkan hedge."},
+    {"agent": "CHRONOS",  "frame": 510, "text": "Siklus 4 tahun masih on track."},
+    {"agent": "ALPHA",    "frame": 590, "text": "Alpha baru: spread funding XRP."},
+    {"agent": "KILLJOY",  "frame": 670, "text": "Stop loss semua posisi sudah terpasang."},
+    {"agent": "ODIN",     "frame": 750, "text": "Portofolio rebalance jam 16:00."},
+    {"agent": "BOSS",     "frame": 840, "text": "Nice work team. Gas terus!"}
+  ],
+
+  "debate": [
+    {"agent": "NEXUS", "text": "Agenda: posisi BTC minggu ini. Long atau short?"},
+    {"agent": "NOVA",  "text": "Breakout 72K terkonfirmasi, volume naik 38%."},
+    {"agent": "ORION", "text": "Funding rate terlalu panas. Risiko long squeeze!"},
+    {"agent": "KAI",   "text": "4H CHoCH bullish, order block di 69.8K."},
+    {"agent": "LYRA",  "text": "Sentimen euforia, Fear & Greed sudah 82."},
+    {"agent": "SOL",   "text": "Rilis CPI Kamis bisa jadi katalis turun."},
+    {"agent": "VEGA",  "text": "Backtest setup ini: winrate 61%, RR 1:2.4."},
+    {"agent": "REX",   "text": "Likuiditas tebal di 70K, eksekusi bisa bertahap."},
+    {"agent": "MIRA",  "text": "Maks risiko 2% per trade. Sepakat?"},
+    {"agent": "NEXUS", "text": "Keputusan: long bertahap, SL di 68.9K."}
+  ]
+}

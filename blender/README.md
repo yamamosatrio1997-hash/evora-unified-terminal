@@ -68,4 +68,6 @@ tertutup furnitur. Tipe yang tidak dikenal dilewati dengan pesan `[skip]` di kon
 
 ## Proyek lain di folder ini
 
-- [QUANTBOT](QUANTBOT.md): kantor 9 agen trading AI bergaya Minecraft, lengkap dengan rig jalan/duduk, Meeting Room untuk debat, dan chat bubble.
+- [QUANTBOT HQ](QUANTBOT_HQ.md): kantor dua lantai + eksterior. Trading Floor dengan 9 Trade Executor,
+  Meeting Room, Pantry, 9 ruang Lead, ruang Owner dengan set DJ, Game Room, viewer live di Blender dan browser.
+- [QUANTBOT v1](QUANTBOT.md): versi satu lantai sebelumnya (9 agen, Meeting Room, chat bubble).

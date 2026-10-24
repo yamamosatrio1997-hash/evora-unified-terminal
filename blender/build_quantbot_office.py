@@ -159,13 +159,62 @@ def build_character_mesh(agent):
     a = b.add
     outfit = lk.get("outfit", "tshirt")
 
-    # kaki: sepatu + celana
+    # kaki: sepatu + celana (atau celana pendek + sandal untuk outfit pantai)
     for side, (x0, x1) in (("leg.L", (0, 4)), ("leg.R", (-4, 0))):
-        a(x0, x1, -2, 2, 0, 2.2, "shoes", side)
-        a(x0, x1, -2, 2, 2.2, 12, "pants", side)
+        if outfit == "beach":
+            a(x0, x1, -2.1, 2.1, 0, 0.6, "shoes", side)        # sandal
+            a(x0, x1, -2, 2, 0.6, 7, "skin", side)
+            a(x0 - 0.1 if x0 < 0 else x0, x1 + 0.1 if x1 > 0 else x1, -2.1, 2.1, 7, 12, "pants", side)
+        else:
+            a(x0, x1, -2, 2, 0, 2.2, "shoes", side)
+            a(x0, x1, -2, 2, 2.2, 12, "pants", side)
     # badan
+    sleeve = "top"
     a(-4, 4, -2, 2, 12, 24, "top", "body")
-    if outfit == "suit":
+    if outfit in ("suit", "blazer"):
+        stripe = 1.3 if outfit == "suit" else 2.0
+        a(-stripe, stripe, -2.2, -2.0, 15 if outfit == "blazer" else 16, 24, "top2", "body")
+        if outfit == "suit":
+            a(-0.5, 0.5, -2.35, -2.15, 15, 23.6, "accent", "body")  # dasi
+        else:
+            for z in (14.0, 16.5):
+                a(-2.7, -2.2, -2.3, -2.05, z, z + 0.5, "accent", "body")  # kancing
+        a(-4, 4, -2.1, 2.1, 12, 13, "dark", "body")           # ikat pinggang
+    elif outfit == "vest":
+        sleeve = "top2"                                       # lengan = kemeja
+        a(-4, 4, -2, 2, 12, 24, "top2", "body")
+        a(-4.1, 4.1, -2.15, 2.15, 13, 22, "top", "body")      # rompi
+        a(-1.2, 1.2, -2.25, -2.1, 18, 22.2, "top2", "body")
+        a(-0.45, 0.45, -2.35, -2.2, 16, 23.6, "accent", "body")
+    elif outfit == "shirt_tie":
+        a(-2.4, 2.4, -2.25, -2.0, 23.0, 24, "top2", "body")   # kerah
+        a(-0.45, 0.45, -2.35, -2.15, 14, 23.4, "accent", "body")
+        a(-4, 4, -2.1, 2.1, 12, 13, "dark", "body")
+    elif outfit == "turtleneck":
+        a(-2.6, 2.6, -2.4, 2.4, 23.3, 24.8, "top", "body")
+        a(-3, 3, -2.15, -2.0, 13, 13.6, "top2", "body")
+    elif outfit == "cardigan":
+        a(-1.6, 1.6, -2.2, -2.0, 13, 24, "top2", "body")
+        for z in (14.5, 17, 19.5):
+            a(-2.2, -1.7, -2.3, -2.05, z, z + 0.5, "accent", "body")
+    elif outfit == "polo":
+        a(-2.3, 2.3, -2.25, -2.0, 23.0, 24, "top2", "body")
+        a(-0.4, 0.4, -2.25, -2.05, 20.5, 23.0, "top2", "body")
+        a(1.4, 2.4, -2.25, -2.05, 19.8, 20.8, "accent", "body")
+    elif outfit == "blouse":
+        a(-1.6, 1.6, -2.3, -2.05, 22.3, 23.6, "accent", "body")   # pita
+        a(-0.5, 0.5, -2.4, -2.2, 20.6, 22.5, "accent", "body")
+    elif outfit == "sweater":
+        for x0, x1 in ((-2.2, -0.2), (0.2, 2.2)):
+            a(x0, x1, -2.25, -2.0, 22.6, 24, "top2", "body")   # kerah kemeja
+        a(-4, 4, -2.1, 2.1, 12, 13.2, "top2", "body")
+    elif outfit == "beach":
+        a(-1.0, 1.0, -2.2, -2.0, 21.5, 24, "skin", "body")    # kerah terbuka
+        flowers = ((-3, 21), (2, 22.5), (-1.5, 16.5), (2.5, 14.5), (-3.2, 13), (0.5, 19))
+        for i, (x, z) in enumerate(flowers):
+            a(x, x + 1.2, -2.25, -2.0, z, z + 1.2, "top2" if i % 2 else "accent", "body")
+            a(x, x + 1.2, 2.0, 2.25, z, z + 1.2, "accent" if i % 2 else "top2", "body")
+    elif outfit == "hoodie":
         a(-1.3, 1.3, -2.2, -2.0, 16, 24, "top2", "body")      # kemeja
         a(-0.5, 0.5, -2.35, -2.15, 15, 23.6, "accent", "body")  # dasi
         a(-4, 4, -2.1, 2.1, 12, 13, "dark", "body")           # ikat pinggang
@@ -178,10 +227,15 @@ def build_character_mesh(agent):
         a(-2.2, 2.2, -2.2, -2.0, 23.2, 24, "top2", "body")    # kerah
         a(-1.1, 1.1, -2.2, -2.0, 18.5, 20.7, "accent", "body")  # logo
     # lengan
-    sleeve_bottom = 19 if outfit == "tshirt" else 14
+    sleeve_bottom = {"tshirt": 19, "polo": 19, "beach": 19, "blouse": 16}.get(outfit, 14)
     for side, (x0, x1) in (("arm.L", (4, 8)), ("arm.R", (-8, -4))):
         a(x0, x1, -2, 2, 12, sleeve_bottom, "skin", side)
-        a(x0, x1, -2, 2, sleeve_bottom, 24, "top", side)
+        a(x0, x1, -2, 2, sleeve_bottom, 24, sleeve, side)
+        if outfit == "beach":
+            a(x0 + 1, x0 + 2.2, -2.15, -2.0, 20.5, 21.7, "top2", side)
+    if lk.get("badge"):
+        a(1.6, 3.2, -2.3, -2.05, 17.5, 19.5, "eye", "body")      # ID card
+        a(2.1, 2.7, -2.3, -2.05, 19.5, 23.5, "accent", "body")    # tali lanyard
     # kepala & wajah (depan = -Y)
     a(-4, 4, -4, 4, 24, 32, "skin", "head")
     for s in (-1, 1):
@@ -204,6 +258,10 @@ def build_character_mesh(agent):
             a(x0, x1, -4.38, -4.18, 26.55, 28.45, *g)
         for x0, x1 in ((-4.35, -4.1), (4.1, 4.35)):
             a(x0, x1, -4.2, 0, 27.8, 28.2, *g)
+    if lk.get("sunglasses"):
+        a(-3.7, 3.7, -4.4, -4.15, 26.5, 28.5, "dark", "head")
+        for x0, x1 in ((-4.4, -4.1), (4.1, 4.4)):
+            a(x0, x1, -4.2, 0, 27.6, 28.1, "dark", "head")
     if lk.get("headset"):
         g = ("dark", "head")
         a(-4.5, 4.5, -0.6, 0.6, 32.5, 33.2, *g)
@@ -228,7 +286,7 @@ def build_character_mesh(agent):
 def build_hair(a, lk):
     style = lk.get("hair_style", "short")
     h = ("hair", "head")
-    if style in ("short", "messy", "long", "bun"):
+    if style in ("short", "messy", "long", "bun", "ponytail"):
         a(-4.25, 4.25, -4.25, 4.25, 31.5, 32.5, *h)            # atas
         a(-4.25, 4.25, 3.6, 4.25, 27, 32, *h)                  # belakang
         for x0, x1 in ((-4.25, -3.75), (3.75, 4.25)):
@@ -242,6 +300,9 @@ def build_hair(a, lk):
         a(-4.3, 4.3, 3.6, 4.4, 20.5, 32, *h)
         for x0, x1 in ((-4.4, -3.75), (3.75, 4.4)):
             a(x0, x1, -2.5, 4.4, 24.5, 32, *h)
+    elif style == "ponytail":
+        a(-1.3, 1.3, 4.2, 5.4, 22.5, 30.5, *h)
+        a(-1.6, 1.6, 4.0, 5.0, 29.5, 31.0, "accent", "head")
     elif style == "bun":
         a(-1.6, 1.6, 4.0, 6.2, 30.5, 33.6, *h)
     elif style == "cap":
@@ -293,7 +354,7 @@ def build_rig(agent, col):
     mod.object = rig
     rig["agent_id"] = name
     rig["role"] = agent["role"]
-    rig["camp"] = agent["camp"]
+    rig["camp"] = agent.get("camp", "")
     return rig
 
 
@@ -465,7 +526,7 @@ def bake(rig, plan, plans, speeches, frame_end):
         prev_yaw = yaw
         poses.append((f, plan.loc(f), yaw, p))
     for f, loc, yaw, p in poses:
-        rig.location = (loc.x, loc.y, 0)
+        rig.location = (loc.x, loc.y, getattr(plan, "z", 0.0))
         rig.rotation_euler = (0, 0, yaw)
         rig.keyframe_insert("location", frame=f)
         rig.keyframe_insert("rotation_euler", index=2, frame=f)
