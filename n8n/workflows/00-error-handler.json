@@ -1,0 +1,119 @@
+{
+  "id": "tccErrorHandler1",
+  "name": "TCC 00 - Error handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "42656da9-1ae0-5d1c-a648-aebde13e5481",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/n8n/callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow_id: $json.workflow.id, workflow_name: $json.workflow.name, execution_id: String($json.execution.id || \"unknown\"), status: \"error\", finished_at: $now.toISO(), error: ($json.execution.error && $json.execution.error.message) || \"unknown error\" }) }}"
+      },
+      "id": "b500158a-c0f6-5534-ba9d-9a53ada12293",
+      "name": "Report error to backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/telegram/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: \"alert\", message: \"Workflow gagal: \" + $json.workflow.name + \" \u2014 \" + (($json.execution.error && $json.execution.error.message) || \"unknown\").slice(0, 300) }) }}"
+      },
+      "id": "d39ae4aa-2b49-5154-97d2-a6c4b3876799",
+      "name": "Alert via Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Report error to backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report error to backend": {
+      "main": [
+        [
+          {
+            "node": "Alert via Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 900,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "versionId": "7c0a9cbe-a5f1-5d92-a99d-e0c4737a2b74"
+}

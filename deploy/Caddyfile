@@ -1,0 +1,7 @@
+{$DOMAIN} {
+    encode gzip
+    reverse_proxy frontend:8080 {
+        header_up X-Forwarded-Proto https
+        flush_interval -1
+    }
+}

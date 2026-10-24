@@ -1,0 +1,189 @@
+{
+  "id": "tccDebateSched01",
+  "name": "TCC 03 - Multi-agent debate (every 4h)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5 0,4,8,12,16,20 * * *"
+            }
+          ]
+        }
+      },
+      "id": "42656da9-1ae0-5d1c-a648-aebde13e5481",
+      "name": "After each 4h candle close",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/debate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 600000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ symbol: \"BTCUSDT\", wait: true, idempotency_key: \"sched:BTCUSDT:\" + $now.toUTC().startOf(\"day\").plus({hours: Math.floor($now.toUTC().hour / 4) * 4}).toISO() }) }}"
+      },
+      "id": "b500158a-c0f6-5534-ba9d-9a53ada12293",
+      "name": "Debate BTCUSDT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/debate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 600000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ symbol: \"ETHUSDT\", wait: true, idempotency_key: \"sched:ETHUSDT:\" + $now.toUTC().startOf(\"day\").plus({hours: Math.floor($now.toUTC().hour / 4) * 4}).toISO() }) }}"
+      },
+      "id": "d39ae4aa-2b49-5154-97d2-a6c4b3876799",
+      "name": "Debate ETHUSDT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/service/n8n/callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ workflow_id: $workflow.id, workflow_name: $workflow.name, execution_id: $execution.id, status: \"success\", started_at: $execution.startedAt ? $execution.startedAt : null, finished_at: $now.toISO() }) }}"
+      },
+      "id": "6e75e6ab-39f0-5d9d-9636-ee60f9851ef7",
+      "name": "Report success to backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "tccServiceToken1",
+          "name": "TCC Service Token"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "4ffeaa6e-ec1b-5ea5-9bb0-aa861bdd8b32",
+      "name": "Run on demand",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "After each 4h candle close": {
+      "main": [
+        [
+          {
+            "node": "Debate BTCUSDT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debate BTCUSDT": {
+      "main": [
+        [
+          {
+            "node": "Debate ETHUSDT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debate ETHUSDT": {
+      "main": [
+        [
+          {
+            "node": "Report success to backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run on demand": {
+      "main": [
+        [
+          {
+            "node": "Debate BTCUSDT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 900,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tccErrorHandler1",
+    "timezone": "UTC"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [],
+  "versionId": "87e4a624-8805-5786-ae0f-0e089755bf81"
+}
