@@ -113,7 +113,7 @@ def clear_all():
     for coll in list(bpy.data.collections):
         bpy.data.collections.remove(coll)
     for block in (bpy.data.meshes, bpy.data.materials, bpy.data.curves, bpy.data.cameras,
-                  bpy.data.lights, bpy.data.armatures, bpy.data.actions):
+                  bpy.data.lights, bpy.data.armatures, bpy.data.actions, bpy.data.images):
         for item in list(block):
             block.remove(item)
     _MATS.clear()
@@ -636,7 +636,7 @@ def build_office(data, P):
     box("Wall_Left", (t, D, WALL_H), (-W / 2 - t / 2, 0, 0), P["wall"], col, bevel=0.01)
 
     # logo QUANTBOT di dinding belakang area kerja
-    sign_x = (DESK_COLS[0] + DESK_COLS[-1]) / 2
+    sign_x = -3.6   # di kanan layar ticker, tidak bertumpuk
     box("Sign_Panel", (5.4, 0.08, 1.15), (sign_x, D / 2 - 0.04, 1.55), P["black"], col, bevel=0.03)
     logo = text("Sign_QUANTBOT", o["name"], (sign_x, D / 2 - 0.1, 1.85), 0.62, P["cyan"], col,
                 yaw_deg=0)
@@ -648,7 +648,7 @@ def build_office(data, P):
     box("Ticker_Screen", (2.05, 0.01, 1.05), (-W / 2 + 1.3, D / 2 - 0.065, 1.475), P["screen"], col, bevel=0)
     candle_chart("Ticker", (-W / 2 + 1.3, D / 2 - 0.08, 1.55), 1.85, 0.85, 22, P, col, seed=7)
 
-    for i, (x, y) in enumerate(((-8.4, 4.4), (-8.4, -4.4), (0.2, 4.4), (8.4, 4.4))):
+    for i, (x, y) in enumerate(((-8.4, 4.4), (-8.4, -4.4), (0.2, 4.4), (8.5, 1.2))):
         build_plant(f"Plant_{i}", (x, y, 0), P, col)
 
 
@@ -740,6 +740,242 @@ def meeting_seats(agents):
         for aid, y in zip(ids, SIDE_SEATS_Y):
             seats[aid] = (Vector((x, y)), yaw, [Vector((lane, DOOR_Y)), Vector((lane, y))])
     return seats
+
+
+# -------------------------------------------------------------- dekorasi
+
+CRYPTO_LOGOS = ("BTC", "ETH", "SOL", "XRP", "BNB", "ONDO", "LINK")
+CRYPTO_NAMES = {"BTC": "BITCOIN", "ETH": "ETHEREUM", "SOL": "SOLANA", "XRP": "XRP",
+                "BNB": "BNB", "ONDO": "ONDO", "LINK": "CHAINLINK"}
+
+
+def flat_shape(name, pts, depth, y, material, col, parent):
+    """Relief datar dari poligon (x, z) di bidang yang menghadap -Y."""
+    bm = bmesh.new()
+    front = [bm.verts.new((x, y - depth / 2, z)) for x, z in pts]
+    back = [bm.verts.new((x, y + depth / 2, z)) for x, z in pts]
+    bm.faces.new(front)
+    bm.faces.new(list(reversed(back)))
+    n = len(pts)
+    for i in range(n):
+        bm.faces.new((front[i], front[(i + 1) % n], back[(i + 1) % n], back[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(material)
+    ob = bpy.data.objects.new(name, me)
+    col.objects.link(ob)
+    ob.parent = parent
+    return ob
+
+
+def disc(name, r, depth, y, material, col, parent, segs=48, cx=0.0, cz=0.0):
+    pts = [(cx + r * math.cos(2 * math.pi * i / segs), cz + r * math.sin(2 * math.pi * i / segs))
+           for i in range(segs)]
+    ob = flat_shape(name, pts, depth, y, material, col, parent)
+    for poly in ob.data.polygons:
+        poly.use_smooth = len(poly.vertices) == 4
+    return ob
+
+
+def half_disc(r, cx, cz, start_deg, segs=16):
+    return [(cx + r * math.cos(math.radians(start_deg + 180 * i / segs)),
+             cz + r * math.sin(math.radians(start_deg + 180 * i / segs))) for i in range(segs + 1)]
+
+
+def crypto_logo(sym, g, col, r=0.36):
+    """Logo kripto sederhana (relief) di depan piringan; depan = -Y lokal."""
+    fy = -0.05   # bidang muka simbol
+    def m(hexc, emit=0.0):
+        return mat(hexc, 0.35, emit=emit)
+    disc(f"{g.name}_rim", r + 0.035, 0.05, 0.0, m("#2B2F36"), col, g)
+    if sym == "BTC":
+        disc(f"{g.name}_bg", r, 0.06, -0.01, m("#F7931A"), col, g)
+        b = text(f"{g.name}_B", "B", (0.01, fy, -0.17), 0.46, m("#FFFFFF"), col, g, yaw_deg=0)
+        b.data.extrude = 0.012
+        for x in (-0.06, 0.0):
+            for z0, z1 in ((0.15, 0.22), (-0.22, -0.15)):
+                flat_shape(f"{g.name}_bar", [(x - 0.016, z0), (x + 0.016, z0), (x + 0.016, z1), (x - 0.016, z1)],
+                           0.024, fy, m("#FFFFFF"), col, g)
+    elif sym == "ETH":
+        disc(f"{g.name}_bg", r, 0.06, -0.01, m("#ECEFF4"), col, g)
+        for side, shade in ((-1, "#8A9FF0"), (1, "#627EEA")):
+            flat_shape(f"{g.name}_top{side}", [(0, 0.27), (0, -0.04), (0.15 * side, 0.03)], 0.03, fy,
+                       m(shade), col, g)
+            flat_shape(f"{g.name}_bot{side}", [(0, -0.09), (0, -0.28), (0.15 * side, -0.02)], 0.03, fy,
+                       m(shade), col, g)
+    elif sym == "SOL":
+        disc(f"{g.name}_bg", r, 0.06, -0.01, m("#0B0B12"), col, g)
+        for zc, d, c in ((0.11, 0.045, "#00FFA3"), (0.0, -0.045, "#7F8CF0"), (-0.11, 0.045, "#DC1FFF")):
+            h = 0.034
+            flat_shape(f"{g.name}_bar{zc:+.2f}", [(-0.17 - d, zc - h), (0.17 - d, zc - h), (0.17 + d, zc + h),
+                                                  (-0.17 + d, zc + h)], 0.03, fy, m(c, 1.2), col, g)
+    elif sym == "XRP":
+        disc(f"{g.name}_bg", r, 0.06, -0.01, m("#23292F"), col, g)
+        for s in (1, -1):
+            pts = [(-0.19, 0.19 * s), (-0.11, 0.19 * s), (0, 0.08 * s), (0.11, 0.19 * s), (0.19, 0.19 * s),
+                   (0.035, 0.035 * s), (-0.035, 0.035 * s)]
+            if s < 0:
+                pts = list(reversed(pts))
+            flat_shape(f"{g.name}_v{s:+d}", pts, 0.03, fy, m("#FFFFFF"), col, g)
+    elif sym == "BNB":
+        disc(f"{g.name}_bg", r, 0.06, -0.01, m("#1E2026"), col, g)
+        gold = m("#F3BA2F", 0.6)
+        def diamond(cx, cz, k):
+            return [(cx, cz + k), (cx + k, cz), (cx, cz - k), (cx - k, cz)]
+        flat_shape(f"{g.name}_c", diamond(0, 0, 0.075), 0.03, fy, gold, col, g)
+        for i, (cx, cz) in enumerate(((0.16, 0), (-0.16, 0), (0, 0.16), (0, -0.16))):
+            flat_shape(f"{g.name}_d{i}", diamond(cx, cz, 0.045), 0.03, fy, gold, col, g)
+    elif sym == "ONDO":
+        disc(f"{g.name}_bg", r, 0.06, -0.01, m("#101C3D"), col, g)
+        flat_shape(f"{g.name}_l", half_disc(0.16, -0.02, 0.025, 90), 0.03, fy, m("#FFFFFF"), col, g)
+        flat_shape(f"{g.name}_r", half_disc(0.16, 0.02, -0.025, 270), 0.03, fy, m("#FFFFFF"), col, g)
+    elif sym == "LINK":
+        disc(f"{g.name}_bg", r, 0.06, -0.01, m("#FFFFFF"), col, g)
+        blue = m("#2A5ADA")
+        for i in range(6):
+            a0, a1 = math.radians(90 + 60 * i), math.radians(150 + 60 * i)
+            ro, ri = 0.22, 0.13
+            flat_shape(f"{g.name}_hex{i}", [(ro * math.cos(a0), ro * math.sin(a0)), (ro * math.cos(a1), ro * math.sin(a1)),
+                                            (ri * math.cos(a1), ri * math.sin(a1)), (ri * math.cos(a0), ri * math.sin(a0))],
+                       0.03, fy, blue, col, g)
+
+
+PIXEL_ART = {
+    "To_The_Moon": (
+        {"k": "#0B1030", "s": "#FFFFFF", "m": "#F4E7B0", "M": "#D8C784", "r": "#E8E8E8",
+         "R": "#E04848", "w": "#4FC3F7", "f": "#FFA726", "F": "#FFEB3B"},
+        ["kkkkkkkkkkkkkkkk",
+         "kksskkkkkkkkmmkk",
+         "kkkkkkkkkkkmmMmk",
+         "kkkkkkskkkkmMmmk",
+         "kkkkkkkkkkkkmmkk",
+         "kkkkkkRkkkkkkkkk",
+         "ksskkrrrkkkkkskk",
+         "kkkkkrwrkkkkkkkk",
+         "kkkkkrrrkkkskkkk",
+         "kkkkRrrrRkkkkkkk",
+         "kkkkkfFfkkkkkkkk",
+         "kkkkkkfkkkkksskk"]),
+    "Sunset_Peaks": (
+        {"p": "#F27E8A", "o": "#FF9E5E", "y": "#FFE07A", "d": "#4A3F6B", "D": "#2E2748",
+         "g": "#3E8E5E", "G": "#2F6B47", "b": "#3A6EA5"},
+        ["pppppppppppppppp",
+         "ppppppppppyypppp",
+         "ooooooooyyyyoooo",
+         "oooooooyyyyyyooo",
+         "ooooodoooyyyyooo",
+         "oooodddoooooooDo",
+         "ooodddddoooooDDD",
+         "oodddddddooDDDDD",
+         "odddddddddDDDDDD",
+         "gggggggggggggggg",
+         "bbbbbbbbbbbbbbbb",
+         "GgGgGgGgGgGgGgGg"]),
+    "HODL": (
+        {"k": "#11131A", "H": "#26DE81", "O": "#F7931A", "D": "#35C9FF", "L": "#DC1FFF"},
+        ["kkkkkkkkkkkkkkkk",
+         "kHkHkOOOkDDkkLkk",
+         "kHkHkOkOkDkDkLkk",
+         "kHHHkOkOkDkDkLkk",
+         "kHkHkOkOkDkDkLkk",
+         "kHkHkOOOkDDkkLLL",
+         "kkkkkkkkkkkkkkkk"]),
+}
+
+
+def pixel_image(name, palette_map, rows):
+    h, w = len(rows), len(rows[0])
+    assert all(len(r) == w for r in rows), name
+    img = bpy.data.images.new(name, w, h, alpha=False)
+    px = []
+    for row in reversed(rows):   # piksel Blender dimulai dari baris bawah
+        for ch in row:
+            px.extend(hex_rgba(palette_map[ch]))
+    img.pixels = px
+    img.pack()
+    return img
+
+
+def painting(name, art, center, size, col, yaw_deg=0, frame_hex="#6B4A2E", emit=0.25):
+    """Lukisan pixel art berbingkai kayu (gaya lukisan Minecraft) menghadap -Y lokal."""
+    pal, rows = PIXEL_ART[art]
+    img = pixel_image(f"IMG_{art}", pal, rows)
+    m = bpy.data.materials.new(f"Paint_{art}")
+    if bpy.app.version < (5, 0):
+        m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    tex.interpolation = "Closest"
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    nt.links.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
+    bsdf.inputs["Emission Strength"].default_value = emit
+    bsdf.inputs["Roughness"].default_value = 0.8
+    g = empty(name, center, yaw_deg, col)
+    w, h = size
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new()
+    verts = [bm.verts.new((x, -0.03, z)) for x, z in ((-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2))]
+    face = bm.faces.new(verts)
+    for loop, co in zip(face.loops, ((0, 0), (1, 0), (1, 1), (0, 1))):
+        loop[uv].uv = co
+    me = bpy.data.meshes.new(f"{name}_canvas")
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(m)
+    canvas = bpy.data.objects.new(f"{name}_canvas", me)
+    col.objects.link(canvas)
+    canvas.parent = g
+    fm, t = mat(frame_hex, 0.6), 0.07
+    box(f"{name}_back", (w, 0.03, h), (0, -0.0, -h / 2), mat("#3A2A1C", 0.8), col, g, bevel=0)
+    for sx, sz, x, z in ((w + 2 * t, t, 0, h / 2), (w + 2 * t, t, 0, -h / 2 - t), (t, h, -w / 2 - t / 2, -h / 2),
+                         (t, h, w / 2 + t / 2, -h / 2)):
+        box(f"{name}_frame", (sx, 0.06, sz), (x, -0.02, z), fm, col, g, bevel=0.01)
+    return g
+
+
+def coin_hologram(name, pos, col, kind):
+    """Pedestal dengan koin/kristal yang berputar terus (driver dari nomor frame)."""
+    g = empty(name, (pos[0], pos[1], 0), 0, col)
+    cyl(f"{name}_ped", 0.32, 0.75, (0, 0, 0), mat("#20242C", 0.4), col, g, segs=8)
+    cyl(f"{name}_glow", 0.26, 0.02, (0, 0, 0.75), mat("#35C9FF", 0.3, emit=6.0), col, g, segs=32)
+    spin = empty(f"{name}_spin", (0, 0, 1.35), 0, col, g)
+    if kind == "BTC":
+        coin = empty(f"{name}_coin", (0, 0, 0), 0, col, spin)
+        crypto_logo("BTC", coin, col, r=0.3)
+        back = empty(f"{name}_coin_back", (0, 0, 0), 180, col, spin)
+        crypto_logo("BTC", back, col, r=0.3)
+    else:
+        top = mat("#8A9FF0", 0.25, emit=1.5)
+        bot = mat("#627EEA", 0.25, emit=1.5)
+        cyl(f"{name}_up", 0.22, 0.42, (0, 0, -0.02), top, col, spin, r2=0.0, segs=4)
+        cyl(f"{name}_dn", 0.0, 0.26, (0, 0, -0.3), bot, col, spin, r2=0.22, segs=4)
+    fc = spin.driver_add("rotation_euler", 2)
+    fc.driver.expression = "frame * 0.06"
+    return g
+
+
+def build_decor(P):
+    col = collection("Decor")
+    # dinding kiri: deretan logo kripto (menghadap +X)
+    n = len(CRYPTO_LOGOS)
+    for i, sym in enumerate(CRYPTO_LOGOS):
+        y = (i - (n - 1) / 2) * 1.25
+        g = empty(f"Logo_{sym}", (-W / 2 + 0.06, y, 1.95), 90, col)
+        g["symbol"] = sym
+        crypto_logo(sym, g, col)
+        text(f"Logo_{sym}_label", CRYPTO_NAMES[sym], (0, -0.03, -0.56), 0.1, P["label"], col, g, yaw_deg=0)
+    text("Logo_Wall_Title", "WATCHLIST", (-W / 2 + 0.03, 0, 2.6), 0.2, P["label"], col, yaw_deg=90)
+    # lukisan pixel art
+    painting("Painting_To_The_Moon", "To_The_Moon", (2.35, D / 2 - 0.02, 1.35), (1.6, 1.2), col)
+    painting("Painting_Sunset_Peaks", "Sunset_Peaks", (7.85, D / 2 - 0.02, 1.35), (1.6, 1.2), col)
+    painting("Banner_HODL", "HODL", (-0.15, D / 2 - 0.02, 2.4), (1.3, 0.57), col, frame_hex="#2D3138", emit=1.2)
+    # hologram koin berputar
+    coin_hologram("Holo_BTC", (TABLE_C.x, -4.25), col, "BTC")
+    coin_hologram("Holo_ETH", (CORRIDOR_X, -4.25), col, "ETH")
 
 
 # -------------------------------------------------------- kamera & render
@@ -838,6 +1074,7 @@ def main():
     P = palette()
     build_office(data, P)
     build_meeting_room(data, P)
+    build_decor(P)
     agents = data["agents"]
     by_id = {a["id"]: a for a in agents}
 

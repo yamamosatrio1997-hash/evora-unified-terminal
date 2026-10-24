@@ -78,6 +78,15 @@ Template ada di collection `QB_Assets` (disembunyikan). Untuk mengubah dialog,
 edit `desk_chatter` dan `debate` di JSON, lalu jalankan ulang script. Waktu
 bicara dan arah tolehan agen dihitung ulang otomatis.
 
+## Dekorasi
+
+- Dinding kiri "WATCHLIST": 7 plakat logo kripto (Bitcoin, Ethereum, Solana, XRP, BNB,
+  ONDO, Chainlink) dibuat dari geometri relief, bukan gambar, jadi tetap tajam saat di-zoom.
+- Lukisan pixel art berbingkai kayu ala lukisan Minecraft: "To The Moon" dan "Sunset Peaks"
+  di Meeting Room, banner "HODL" di dinding belakang Trading Floor.
+- Hologram koin berputar di atas pedestal: Bitcoin di Meeting Room dan Ethereum di ujung lorong.
+  Putarannya memakai driver dari nomor frame, jadi ikut berjalan saat animasi diputar.
+
 ## Scene lain
 
 `Character_Lineup` berisi 9 agen berjajar dengan papan nama. Pilih scene ini dari
