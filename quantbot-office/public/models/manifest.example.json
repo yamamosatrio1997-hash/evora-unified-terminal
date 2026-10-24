@@ -1,0 +1,32 @@
+{
+  "models": {
+    "staff": {
+      "url": "models/staff.glb",
+      "scale": 1,
+      "clips": {
+        "idle": "Idle",
+        "walk": "Walking",
+        "sit": "Sitting Idle",
+        "type": "Typing",
+        "talk": "Talking",
+        "sitTalk": "Sitting Talking",
+        "think": "Thinking",
+        "drink": "Drinking",
+        "billiard": "Pool Shot",
+        "pingpong": "Ping Pong",
+        "gamepad": "Playing Video Game"
+      }
+    },
+    "odin": { "url": "models/odin.glb", "clips": { "idle": "Idle", "walk": "Walking", "sit": "Sitting Idle", "talk": "Talking" } },
+    "yama": { "url": "models/yama.glb", "clips": { "idle": "Idle", "sit": "Sitting Idle", "type": "Typing", "sitTalk": "Sitting Talking" } }
+  },
+  "roles": { "trader": "staff", "lead": "staff" },
+  "characters": { "odin": "odin", "yama": "yama" },
+  "environment": {
+    "url": "models/office.glb",
+    "scale": 1,
+    "position": [0, 0, 0],
+    "rotationY": 0,
+    "hideProcedural": true
+  }
+}
