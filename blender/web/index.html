@@ -282,7 +282,7 @@ draco.setDecoderPath("./");
 draco.setDecoderConfig({ type: "js" });
 const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
-const gltf = await new Promise((resolve, reject) => loader.load("./quantbot_hq.glb", resolve, (e) => {
+const gltf = await new Promise((resolve, reject) => loader.load("./quantbot_hq_model.json", resolve, (e) => {
   if (e.total) $("loadFill").style.width = `${Math.round((e.loaded / e.total) * 100)}%`;
 }, reject)).catch((err) => {
   $("loadText").textContent = "Model 3D gagal dimuat. Muat ulang halaman untuk mencoba lagi.";

@@ -26,7 +26,7 @@
 | `build_quantbot_hq.py` | Generator gedung, eksterior, ruangan, karakter, dan animasi |
 | `quantbot_hq.json` | Owner, 9 Lead, 9 Trade Executor, obrolan, dan naskah debat |
 | `quantbot_viewer_panel.py` | Panel sidebar Blender (ikut tersimpan di dalam `.blend`) |
-| `web/` | Viewer 3D di browser: `index.html`, `quantbot_hq.glb`, jadwal, dan decoder Draco |
+| `web/` | Viewer 3D di browser: `index.html`, model (`quantbot_hq_model.json` = glTF dengan buffer tertanam, `quantbot_hq.glb` = versi biner yang sama), jadwal, decoder Draco |
 
 Bangun ulang semuanya:
 
@@ -81,7 +81,7 @@ Rig setiap agen sama: `root`, `body`, `head`, `arm.L/R`, `leg.L/R`. Action siap 
 
 Animasi berjalan real-time di viewport (mode Material Preview atau Solid). Mouse wheel dan zoom viewport biasa juga tetap bisa dipakai.
 
-**Di browser**: buka `web/index.html` lewat web server (atau versi Artifact yang sudah dipublikasikan). Isinya:
+**Di browser**: buka versi online di https://claude.ai/artifact/Gme1njmeVyDMtdHR9WBfTS (link privat: orang lain bisa membukanya setelah Anda bagikan lewat menu Share), atau jalankan `python3 -m http.server` di folder `web/` lalu buka `index.html`. Isinya:
 
 - zoom dengan scroll atau pinch, putar dengan drag, geser dengan klik kanan atau dua jari;
 - tombol per ruangan dan per Lead;
