@@ -1,6 +1,5 @@
-# Netlify hosts the static frontend only. The FastAPI backend and Postgres cannot run here;
-# until a backend URL is configured, /api answers 503 so the app shows "backend offline"
-# instead of parsing index.html as JSON.
+# Netlify hosts the static frontend only. The FastAPI backend and Postgres run on Render;
+# /api is proxied there so the session cookie stays first-party on the Netlify domain.
 [build]
   base = "frontend"
   command = "npm ci && npm run build"
@@ -9,12 +8,10 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# To connect a backend later, replace this rule with a proxy, e.g.
-#   from = "/api/*"  to = "https://<backend-host>/api/:splat"  status = 200  force = true
 [[redirects]]
   from = "/api/*"
-  to = "/backend-offline.json"
-  status = 503
+  to = "https://odin-backend-9hom.onrender.com/api/:splat"
+  status = 200
   force = true
 
 [[redirects]]

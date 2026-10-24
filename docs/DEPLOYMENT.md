@@ -130,8 +130,10 @@ git pull && docker compose build && docker compose up -d     # migrations run on
 deploy/backup.sh                                             # always back up first
 ```
 
-## Option: frontend only on Netlify
+## Option: Netlify frontend + Render backend
 
-`netlify.toml` at the repo root builds `frontend/` and publishes `frontend/dist` with the same security headers as the nginx image. Netlify cannot run the FastAPI backend or Postgres, so until a backend is hosted elsewhere every `/api/*` request returns 503 with a "backend offline" message: the homepage and its labelled ILUSTRASI demo work, while login, signup and the dashboard do not. To connect a backend, replace the `/api/*` rule in `netlify.toml` with a proxy to `https://<backend-host>/api/:splat` (status 200) and set `ALLOW_SIGNUP=false` on that backend unless you have checked TradingView's display terms. Server-sent events through Netlify's proxy are not verified.
+`netlify.toml` at the repo root builds `frontend/` with the nginx image's security headers and proxies `/api/*` to the Render web service `odin-backend` (Docker, `backend/Dockerfile`, one worker, region Singapore), so the HttpOnly SameSite=Strict session cookie stays first-party on the Netlify domain. Postgres is the Render database `odin-db`; paste its Internal Database URL into the service's `DATABASE_URL` (a `postgres://` URL is accepted). The service runs with `APP_ENV=production`, `ALLOW_SIGNUP=false`, `LLM_PROVIDER=none`, and creates the first admin from `ADMIN_BOOTSTRAP_USER`/`ADMIN_BOOTSTRAP_PASSWORD` when no users exist.
 
-In Netlify: Add new project → Import an existing project → GitHub → this repository, branch of your choice. The build settings come from `netlify.toml`.
+Free-tier limits: the web service sleeps after about 15 minutes idle (the first request then takes about a minute) and the free database expires after 30 days. Server-sent events through Netlify's proxy are not verified; if the live floor stays idle, point the event stream at the Render URL directly.
+
+In Netlify: Add new project → Import an existing project → GitHub → this repository. The build settings come from `netlify.toml`.
