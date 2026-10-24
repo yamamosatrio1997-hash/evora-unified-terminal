@@ -1,0 +1,508 @@
+<title>QUANTBOT HQ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: kanvas 3D penuh layar; panel kaca gelap mengapung di atasnya (kiri: ruangan & lantai,
+   kanan: feed live & agen, bawah: timeline). Satu tema gelap yang disengaja, seperti terminal trading. */
+:root {
+  color-scheme: dark;
+  --sky: #cdd5df;
+  --panel: rgba(13, 17, 24, 0.86);
+  --panel-solid: #0d1118;
+  --line: rgba(232, 238, 245, 0.10);
+  --ink: #e8eef5;
+  --muted: #93a1b4;
+  --accent: #35c9ff;
+  --accent-ink: #04202b;
+  --bull: #26de81;
+  --bear: #ff4d5e;
+  --gold: #f7c948;
+  --font-pixel: "Silkscreen", "Courier New", monospace;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--sky); color: var(--ink); font-family: var(--font-body); font-size: 14px;
+  overflow: hidden;
+}
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.panel {
+  position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+/* brand */
+#brand {
+  top: calc(12px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px));
+  padding: 10px 14px; display: flex; align-items: center; gap: 12px;
+}
+#brand h1 { margin: 0; font-family: var(--font-pixel); font-size: 18px; letter-spacing: 0.04em; color: var(--accent); line-height: 1; }
+#brand .live { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+#brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bull); box-shadow: 0 0 8px var(--bull); }
+#brand.paused .dot { background: var(--muted); box-shadow: none; }
+
+/* sidebar ruangan */
+#rooms {
+  top: calc(70px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px));
+  width: 236px; max-height: calc(100% - 170px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 14px;
+}
+.group { display: flex; flex-direction: column; gap: 6px; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.btns.three { grid-template-columns: repeat(3, 1fr); }
+.vbtn {
+  background: rgba(232,238,245,0.05); border: 1px solid var(--line); border-radius: 7px; padding: 7px 8px;
+  text-align: left; cursor: pointer; font-size: 12.5px; line-height: 1.2; transition: background .15s, border-color .15s;
+}
+.btns.three .vbtn { text-align: center; font-family: var(--font-mono); font-size: 10.5px; padding: 7px 2px; }
+.vbtn:hover { background: rgba(53,201,255,0.12); border-color: rgba(53,201,255,0.4); }
+.vbtn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+.toggles label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; }
+.toggles input { accent-color: var(--accent); }
+.zoomrow { display: flex; align-items: center; gap: 8px; }
+.zoomrow button { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--line); background: rgba(232,238,245,0.05); cursor: pointer; font-size: 16px; }
+.zoomrow input { flex: 1; min-width: 0; accent-color: var(--accent); }
+
+/* feed + agen */
+#side {
+  top: calc(12px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  width: 300px; max-height: calc(100% - 112px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; background: none; border: 0; padding: 10px; cursor: pointer; color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.tabs button[aria-selected="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+.tabbody { overflow-y: auto; padding: 10px 12px 12px; min-height: 0; }
+.msg { display: grid; grid-template-columns: 6px 1fr; gap: 10px; padding: 8px 6px; border-radius: 7px; cursor: pointer; }
+.msg:hover { background: rgba(232,238,245,0.05); }
+.msg .bar { border-radius: 3px; }
+.msg .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.msg .who { font-weight: 600; color: var(--ink); font-family: var(--font-body); letter-spacing: .02em; }
+.msg .txt { margin-top: 2px; line-height: 1.4; }
+.msg.now { background: rgba(53,201,255,0.10); }
+.msg.now .meta::after { content: "BICARA"; color: var(--accent); font-weight: 600; }
+.msg .floor { color: var(--muted); }
+.empty { color: var(--muted); padding: 8px 6px; line-height: 1.5; }
+.agents { display: flex; flex-direction: column; gap: 10px; }
+.agents h3 { margin: 4px 0 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line);
+  background: rgba(232,238,245,0.05); cursor: pointer; font-family: var(--font-mono); font-size: 11px;
+}
+.chip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.chip.on { border-color: var(--accent); background: rgba(53,201,255,0.16); }
+
+/* timeline */
+#timeline {
+  left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  width: min(720px, calc(100% - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  padding: 10px 14px; display: flex; align-items: center; gap: 12px; box-sizing: border-box;
+}
+#play { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; font-size: 15px; flex: none; }
+#scrub { flex: 1; min-width: 0; accent-color: var(--accent); }
+#clock { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#speed { background: rgba(232,238,245,0.05); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; flex: none; }
+.marks { position: relative; }
+
+#follow {
+  left: 50%; transform: translateX(-50%); bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  padding: 7px 12px; display: flex; gap: 10px; align-items: center; font-size: 12.5px;
+}
+#follow button { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+
+#loading {
+  position: fixed; inset: 0; display: grid; place-items: center; background: var(--panel-solid); z-index: 20;
+}
+#loading .box { width: min(320px, 80vw); display: flex; flex-direction: column; gap: 14px; text-align: center; }
+#loading h2 { margin: 0; font-family: var(--font-pixel); color: var(--accent); font-size: 22px; }
+#loading .track { height: 8px; background: rgba(232,238,245,0.1); border-radius: 4px; overflow: hidden; }
+#loading .fill { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+#loading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+.mobtoggle { display: none; }
+
+@media (max-width: 760px) {
+  #rooms, #side { display: none; }
+  #rooms.open, #side.open { display: flex; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); width: auto;
+    top: auto; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); max-height: 58%; }
+  .mobtoggle { display: flex; position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); gap: 6px; }
+  .mobtoggle button { padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; font-size: 12px; }
+  .mobtoggle button.on { background: var(--accent); color: var(--accent-ink); }
+  #brand h1 { font-size: 15px; }
+  #follow { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div id="stage" aria-label="Tampilan 3D kantor QUANTBOT HQ"></div>
+
+<div id="brand" class="panel">
+  <h1>QUANTBOT HQ</h1>
+  <div class="live"><span class="dot"></span><span id="liveLabel">LIVE</span></div>
+</div>
+
+<div class="mobtoggle">
+  <button id="mobRooms" type="button">Ruangan</button>
+  <button id="mobSide" type="button">Feed</button>
+</div>
+
+<nav id="rooms" class="panel" aria-label="Pilih ruangan">
+  <div class="group"><span class="label">Gedung</span><div class="btns" id="g-building"></div></div>
+  <div class="group"><span class="label">Lantai 1</span><div class="btns" id="g-f1"></div></div>
+  <div class="group"><span class="label">Lantai 2</span><div class="btns" id="g-f2"></div></div>
+  <div class="group"><span class="label">Ruang Lead</span><div class="btns three" id="g-leads"></div></div>
+  <div class="group"><span class="label">Tampilkan</span>
+    <div class="toggles" id="toggles"></div>
+  </div>
+  <div class="group"><span class="label">Zoom</span>
+    <div class="zoomrow">
+      <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
+      <input type="range" id="zoom" min="0" max="100" value="40" aria-label="Zoom">
+      <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
+    </div>
+  </div>
+</nav>
+
+<aside id="side" class="panel" aria-label="Aktivitas kantor">
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabFeed" aria-selected="true" type="button">Feed live</button>
+    <button role="tab" id="tabAgents" aria-selected="false" type="button">Agen</button>
+  </div>
+  <div class="tabbody" id="feed" role="tabpanel"></div>
+  <div class="tabbody" id="agentsPane" role="tabpanel" hidden>
+    <div class="agents" id="agents"></div>
+  </div>
+</aside>
+
+<div id="follow" class="panel" hidden>
+  <span>Mengikuti <b id="followName"></b></span>
+  <button type="button" id="followStop">Berhenti</button>
+</div>
+
+<div id="timeline" class="panel">
+  <button id="play" type="button" aria-label="Pause">❚❚</button>
+  <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Waktu animasi">
+  <span id="clock">00:00 / 00:00</span>
+  <button id="speed" type="button" aria-label="Kecepatan">1×</button>
+</div>
+
+<div id="loading"><div class="box">
+  <h2>QUANTBOT</h2>
+  <div class="track"><div class="fill" id="loadFill"></div></div>
+  <p id="loadText">Memuat gedung 3D…</p>
+</div></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const $ = (id) => document.getElementById(id);
+const VIEW_LABELS = {
+  CAM_Overview: "Overview", CAM_Building: "Gedung", CAM_Exterior: "Eksterior",
+  CAM_Floor1: "Lantai 1", CAM_TradingFloor: "Trading Floor", CAM_MeetingRoom: "Meeting Room", CAM_Pantry: "Pantry",
+  CAM_Floor2: "Lantai 2", CAM_LeadRooms: "Semua Lead", CAM_OwnerRoom: "Ruang Owner", CAM_GameRoom: "Game Room",
+};
+const GROUPS = { building: ["CAM_Building", "CAM_Overview", "CAM_Exterior"],
+  f1: ["CAM_Floor1", "CAM_TradingFloor", "CAM_MeetingRoom", "CAM_Pantry"],
+  f2: ["CAM_Floor2", "CAM_LeadRooms", "CAM_OwnerRoom", "CAM_GameRoom"] };
+const TOGGLES = [["Exterior", "Eksterior"], ["Floor_1", "Lantai 1"], ["Floor_2", "Lantai 2"], ["Roof", "Atap"],
+  ["Facade", "Kaca fasad"]];
+
+// Blender (Z-atas) -> three.js (Y-atas)
+const bl = (x, y, z) => new THREE.Vector3(x, z, -y);
+const VIEW_DIR = (() => { // arah pandang isometrik: yaw 45, pitch 60 (sama dengan kamera Blender)
+  const p = THREE.MathUtils.degToRad(60), y = THREE.MathUtils.degToRad(45);
+  return bl(-Math.sin(y) * Math.sin(p), Math.cos(y) * Math.sin(p), -Math.cos(p)).normalize();
+})();
+
+const stage = $("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xcdd5df);
+scene.fog = new THREE.Fog(0xcdd5df, 140, 260);
+scene.add(new THREE.HemisphereLight(0xeef4ff, 0x5d7a4c, 1.6));
+const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
+sun.position.copy(bl(-30, -45, 60));
+scene.add(sun);
+
+const FRUSTUM = 40; // tinggi frustum dasar (meter) pada zoom 1
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -500, 1000);
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight, a = w / h;
+  camera.left = -FRUSTUM * a / 2; camera.right = FRUSTUM * a / 2; camera.top = FRUSTUM / 2; camera.bottom = -FRUSTUM / 2;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+}
+window.addEventListener("resize", resize);
+resize();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = true;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(85);
+controls.minZoom = 0.35;
+controls.maxZoom = 14;
+controls.zoomSpeed = 1.2;
+
+// ---------- data
+const sched = await fetch("./quantbot_hq_schedule.json").then((r) => r.json());
+const FPS = sched.fps, DURATION = (sched.frame_end - 1) / FPS;
+const views = Object.fromEntries(sched.views.map((v) => [v.name, v]));
+const agents = Object.fromEntries(sched.agents.map((a) => [a.id, a]));
+
+// ---------- model
+const draco = new DRACOLoader();
+draco.setDecoderPath("./");
+draco.setDecoderConfig({ type: "js" });
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+const gltf = await new Promise((resolve, reject) => loader.load("./quantbot_hq_model.json", resolve, (e) => {
+  if (e.total) $("loadFill").style.width = `${Math.round((e.loaded / e.total) * 100)}%`;
+}, reject)).catch((err) => {
+  $("loadText").textContent = "Model 3D gagal dimuat. Muat ulang halaman untuk mencoba lagi.";
+  throw err;
+});
+const root = gltf.scene;
+scene.add(root);
+
+const groups = {};
+const bubbles = [];
+const rigs = {};
+root.traverse((o) => {
+  if (o.name.startsWith("GRP_")) groups[o.name.slice(4)] = o;
+  if (/^Bubble_[A-Z]+_\d+$/.test(o.name)) bubbles.push(o);
+  if (agents[o.name] && !rigs[o.name]) rigs[o.name] = o;
+  if (o.isMesh) {
+    o.frustumCulled = true;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      if (m.transmission > 0 || /glass|Glass|DDEEFF/.test(m.name)) {
+        m.transmission = 0; m.transparent = true; m.opacity = 0.22; m.depthWrite = false; m.roughness = 0.05;
+      }
+      if (m.map) { m.map.magFilter = THREE.NearestFilter; m.map.minFilter = THREE.NearestMipmapLinearFilter; }
+    }
+  }
+});
+
+const mixer = new THREE.AnimationMixer(root);
+for (const clip of gltf.animations) mixer.clipAction(clip).play();
+
+// ---------- tampilan & visibilitas
+const visible = { Exterior: true, Floor_1: true, Floor_2: true, Roof: false, Facade: true };
+function applyVisibility() {
+  for (const [k, g] of Object.entries(groups)) {
+    if (k.startsWith("Facade")) g.visible = visible.Facade;
+    else if (k in visible) g.visible = visible[k];
+  }
+  for (const [k] of TOGGLES) { const el = $(`t-${k}`); if (el) el.checked = visible[k]; }
+}
+
+let anim = null; // transisi kamera
+function flyTo(target3, zoom, ms = 750) {
+  const fromT = controls.target.clone(), fromP = camera.position.clone(), fromZ = camera.zoom;
+  const dist = 80;
+  const toP = target3.clone().sub(VIEW_DIR.clone().multiplyScalar(dist));
+  const toT = target3.clone();
+  // pertahankan arah putar user bila sudah di posisi isometrik dasar
+  anim = { t0: performance.now(), ms, fromT, fromP, fromZ, toT, toP, toZ: zoom };
+}
+function zoomForOrtho(ortho) {
+  const a = stage.clientWidth / stage.clientHeight;
+  return (FRUSTUM * a) / ortho;
+}
+let currentView = "CAM_Building";
+function goView(name) {
+  const v = views[name]; if (!v) return;
+  stopFollow();
+  currentView = name;
+  visible.Floor_2 = !v.hide.includes("Floor_2");
+  visible.Roof = v.hide.includes("Roof") ? false : visible.Roof;
+  visible.Facade = !(v.hide.includes("Facade_1") || v.hide.includes("Facade_2"));
+  visible.Floor_1 = true; visible.Exterior = true;
+  applyVisibility();
+  const [x, y, z] = v.target;
+  flyTo(bl(x, y, z), zoomForOrtho(v.ortho));
+  document.querySelectorAll(".vbtn").forEach((b) => b.classList.toggle("on", b.dataset.view === name));
+}
+
+function addBtn(container, name, label) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "vbtn"; b.dataset.view = name; b.textContent = label;
+  b.addEventListener("click", () => { goView(name); closeMobile(); });
+  container.appendChild(b);
+}
+for (const [g, names] of Object.entries(GROUPS)) for (const n of names) if (views[n]) addBtn($(`g-${g === "building" ? "building" : g}`), n, VIEW_LABELS[n]);
+for (const v of sched.views) if (v.name.startsWith("CAM_Lead_")) addBtn($("g-leads"), v.name, v.name.slice(9));
+for (const [k, label] of TOGGLES) {
+  const l = document.createElement("label");
+  l.innerHTML = `<input type="checkbox" id="t-${k}"> ${label}`;
+  l.querySelector("input").addEventListener("change", (e) => { visible[k] = e.target.checked; applyVisibility(); });
+  $("toggles").appendChild(l);
+}
+
+// zoom slider <-> kamera (skala log)
+const zmin = Math.log(controls.minZoom), zmax = Math.log(controls.maxZoom);
+const sliderToZoom = (v) => Math.exp(zmin + (zmax - zmin) * (v / 100));
+const zoomToSlider = (z) => Math.round(((Math.log(z) - zmin) / (zmax - zmin)) * 100);
+$("zoom").addEventListener("input", (e) => { anim = null; camera.zoom = sliderToZoom(+e.target.value); camera.updateProjectionMatrix(); });
+$("zoomIn").addEventListener("click", () => { anim = null; camera.zoom = Math.min(controls.maxZoom, camera.zoom * 1.35); camera.updateProjectionMatrix(); });
+$("zoomOut").addEventListener("click", () => { anim = null; camera.zoom = Math.max(controls.minZoom, camera.zoom / 1.35); camera.updateProjectionMatrix(); });
+controls.addEventListener("start", () => { anim = null; });
+
+// ---------- ikuti agen
+let following = null;
+function follow(id) {
+  if (!rigs[id]) return;
+  following = id;
+  const a = agents[id];
+  visible.Floor_2 = a.floor === 2; visible.Roof = false; visible.Facade = false;
+  applyVisibility();
+  $("follow").hidden = false; $("followName").textContent = id;
+  anim = null;
+  const target = new THREE.Vector3(); rigs[id].getWorldPosition(target); target.y += 1;
+  flyTo(target, zoomForOrtho(7));
+  document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("on", c.dataset.id === id));
+}
+function stopFollow() {
+  following = null; $("follow").hidden = true;
+  document.querySelectorAll(".chip").forEach((c) => c.classList.remove("on"));
+}
+$("followStop").addEventListener("click", stopFollow);
+
+// panel agen
+const exec = sched.agents.filter((a) => a.role === "Trade Executor");
+const leads = sched.agents.filter((a) => a.role === "Lead Agent");
+const owner = sched.agents.filter((a) => a.role !== "Trade Executor" && a.role !== "Lead Agent");
+for (const [title, list] of [["Owner", owner], ["Lead (lantai 2)", leads], ["Trade Executor (lantai 1)", exec]]) {
+  const h = document.createElement("h3"); h.className = "label"; h.textContent = title;
+  const wrap = document.createElement("div"); wrap.className = "chips";
+  for (const a of list) {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "chip"; c.dataset.id = a.id;
+    c.innerHTML = `<i style="background:${a.color}"></i>${a.id}`;
+    c.title = `${a.role} · klik untuk mengikuti`;
+    c.addEventListener("click", () => { follow(a.id); closeMobile(); });
+    wrap.appendChild(c);
+  }
+  $("agents").append(h, wrap);
+}
+
+// tab
+function setTab(feed) {
+  $("tabFeed").setAttribute("aria-selected", feed); $("tabAgents").setAttribute("aria-selected", !feed);
+  $("feed").hidden = !feed; $("agentsPane").hidden = feed;
+}
+$("tabFeed").addEventListener("click", () => setTab(true));
+$("tabAgents").addEventListener("click", () => setTab(false));
+
+// panel mobile
+function closeMobile() {
+  if (window.innerWidth > 760) return;
+  $("rooms").classList.remove("open"); $("side").classList.remove("open");
+  $("mobRooms").classList.remove("on"); $("mobSide").classList.remove("on");
+}
+$("mobRooms").addEventListener("click", () => { const o = !$("rooms").classList.contains("open"); closeMobile(); $("rooms").classList.toggle("open", o); $("mobRooms").classList.toggle("on", o); });
+$("mobSide").addEventListener("click", () => { const o = !$("side").classList.contains("open"); closeMobile(); $("side").classList.toggle("open", o); $("mobSide").classList.toggle("on", o); });
+
+// ---------- waktu & feed
+let playing = true, speed = 1, time = 0;
+const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+$("play").addEventListener("click", () => {
+  playing = !playing; $("play").textContent = playing ? "❚❚" : "▶"; $("play").setAttribute("aria-label", playing ? "Pause" : "Play");
+  $("brand").classList.toggle("paused", !playing); $("liveLabel").textContent = playing ? "LIVE" : "JEDA";
+});
+const SPEEDS = [0.5, 1, 2, 4];
+$("speed").addEventListener("click", () => { speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]; $("speed").textContent = `${speed}×`; });
+$("scrub").addEventListener("input", (e) => { time = (e.target.value / 1000) * DURATION; mixer.setTime(time); lastFeedKey = ""; });
+
+let lastFeedKey = "";
+function renderFeed() {
+  const f = time * FPS + 1;
+  const past = sched.speech.filter((s) => s.f0 <= f);
+  const key = past.length + ":" + past.filter((s) => f < s.f1).length;
+  if (key === lastFeedKey) return;
+  lastFeedKey = key;
+  const el = $("feed");
+  if (!past.length) { el.innerHTML = `<div class="empty">Belum ada percakapan. Agen sedang bekerja di meja masing-masing; pesan baru muncul di sini saat mereka bicara.</div>`; return; }
+  el.innerHTML = "";
+  for (const s of past.slice().reverse()) {
+    const a = agents[s.agent] || { color: "#888" };
+    const row = document.createElement("div");
+    row.className = "msg" + (f < s.f1 ? " now" : "");
+    row.innerHTML = `<span class="bar" style="background:${a.color}"></span><div><div class="meta"><span><span class="who"></span> <span class="floor">· Lt ${s.floor}</span></span><span>${fmt((s.f0 - 1) / FPS)}</span></div><div class="txt"></div></div>`;
+    row.querySelector(".who").textContent = s.agent;
+    row.querySelector(".txt").textContent = s.text;
+    row.addEventListener("click", () => follow(s.agent));
+    el.appendChild(row);
+  }
+}
+
+// ---------- loop
+const clock = new THREE.Clock();
+const camQ = new THREE.Quaternion(), parentQ = new THREE.Quaternion();
+const FIX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+const tmp = new THREE.Vector3();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (playing) { time = (time + dt * speed) % DURATION; mixer.setTime(time); }
+  if (anim) {
+    const u = Math.min(1, (performance.now() - anim.t0) / anim.ms), e = 1 - Math.pow(1 - u, 3);
+    controls.target.lerpVectors(anim.fromT, anim.toT, e);
+    camera.position.lerpVectors(anim.fromP, anim.toP, e);
+    camera.zoom = anim.fromZ + (anim.toZ - anim.fromZ) * e;
+    camera.updateProjectionMatrix();
+    if (u >= 1) anim = null;
+  } else if (following && rigs[following]) {
+    rigs[following].getWorldPosition(tmp); tmp.y += 1;
+    const delta = tmp.sub(controls.target).multiplyScalar(0.12);
+    controls.target.add(delta); camera.position.add(delta);
+  }
+  controls.update();
+  // chat bubble selalu menghadap kamera
+  camera.getWorldQuaternion(camQ);
+  for (const b of bubbles) {
+    if (b.parent) { b.parent.getWorldQuaternion(parentQ); b.quaternion.copy(parentQ.invert().multiply(camQ).multiply(FIX)); }
+  }
+  $("zoom").value = zoomToSlider(camera.zoom);
+  $("scrub").value = Math.round((time / DURATION) * 1000);
+  $("clock").textContent = `${fmt(time)} / ${fmt(DURATION)}`;
+  renderFeed();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+applyVisibility();
+camera.position.copy(bl(-1, 0.3, 3).sub(VIEW_DIR.clone().multiplyScalar(80)));
+controls.target.copy(bl(-1, 0.3, 3));
+camera.zoom = zoomForOrtho(views.CAM_Building.ortho);
+camera.updateProjectionMatrix();
+goView(location.hash && views["CAM_" + location.hash.slice(1)] ? "CAM_" + location.hash.slice(1) : "CAM_Building");
+$("loading").hidden = true;
+tick();
+</script>

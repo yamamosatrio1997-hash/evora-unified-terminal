@@ -1,0 +1,43 @@
+{
+  "office": {
+    "name": "QUANTBOT",
+    "tagline": "AI Trading Desk",
+    "fps": 24
+  },
+  "agents": [
+    {"id": "ATLAS", "role": "Chief Strategist",   "camp": "moderator",
+     "look": {"skin": "#C68E6A", "hair": "#1C1A1A", "hair_style": "short",  "top": "#22344F", "top2": "#F4F4F0", "accent": "#C0392B", "outfit": "suit",    "pants": "#1E2A3D", "shoes": "#141414"}},
+    {"id": "NOVA",  "role": "Market Analyst",     "camp": "bull",
+     "look": {"skin": "#F1C9A5", "hair": "#6B4226", "hair_style": "short",  "top": "#1FA8C9", "top2": "#147A93", "accent": "#FFFFFF", "outfit": "tshirt",  "pants": "#3B4A6B", "shoes": "#F2F2F2", "glasses": true}},
+    {"id": "VEGA",  "role": "Quant Researcher",   "camp": "bull",
+     "look": {"skin": "#D9A273", "hair": "#2E1F14", "hair_style": "messy",  "top": "#3E8E5E", "top2": "#2F6B47", "accent": "#E8E8E8", "outfit": "hoodie",  "pants": "#2C2C34", "shoes": "#5A5A5A", "glasses": true}},
+    {"id": "ORION", "role": "Risk Manager",       "camp": "bear",
+     "look": {"skin": "#8D5524", "hair": "#141010", "hair_style": "bald",   "top": "#5B6168", "top2": "#E8E8E8", "accent": "#2C3E50", "outfit": "suit",    "pants": "#3A3E44", "shoes": "#141414", "beard": true}},
+    {"id": "LYRA",  "role": "Sentiment Analyst",  "camp": "bear",
+     "look": {"skin": "#F3D1B5", "hair": "#8E3B1F", "hair_style": "long",   "top": "#E07A9B", "top2": "#C45C7E", "accent": "#FFFFFF", "outfit": "tshirt",  "pants": "#2D3557", "shoes": "#7A2E43"}},
+    {"id": "KAI",   "role": "Technical Analyst",  "camp": "bull",
+     "look": {"skin": "#C99366", "hair": "#120E0B", "hair_style": "cap",    "top": "#202226", "top2": "#E5B931", "accent": "#D63031", "outfit": "tshirt",  "pants": "#49536B", "shoes": "#E5E5E5"}},
+    {"id": "SOL",   "role": "Macro Economist",    "camp": "bear",
+     "look": {"skin": "#D7A27A", "hair": "#1A1210", "hair_style": "bun",    "top": "#C8B08A", "top2": "#F4F0E6", "accent": "#7A5C3A", "outfit": "suit",    "pants": "#5E5142", "shoes": "#3B2A1E"}},
+    {"id": "REX",   "role": "Execution Trader",   "camp": "neutral",
+     "look": {"skin": "#F0C8A0", "hair": "#E1B54A", "hair_style": "short",  "top": "#E67E22", "top2": "#B85F12", "accent": "#2D3436", "outfit": "hoodie",  "pants": "#2E3A48", "shoes": "#1F1F1F", "headset": true}},
+    {"id": "MIRA",  "role": "Portfolio Manager",  "camp": "neutral",
+     "look": {"skin": "#A86B45", "hair": "#0F0B0A", "hair_style": "long",   "top": "#1B8A8A", "top2": "#F4F4F0", "accent": "#0E5E5E", "outfit": "suit",    "pants": "#20343A", "shoes": "#141414", "glasses": true}}
+  ],
+  "desk_chatter": [
+    {"agent": "ATLAS", "frame": 14, "text": "Tim, kumpul di Meeting Room. Kita debat BTC!"},
+    {"agent": "REX",   "frame": 44, "text": "Siap, bos!"}
+  ],
+  "debate": [
+    {"agent": "ATLAS", "text": "Agenda: posisi BTC minggu ini. Long atau short?"},
+    {"agent": "NOVA",  "text": "Breakout 72K terkonfirmasi, volume naik 38%."},
+    {"agent": "ORION", "text": "Funding rate terlalu panas. Risiko long squeeze!"},
+    {"agent": "KAI",   "text": "4H CHoCH bullish, order block di 69.8K."},
+    {"agent": "LYRA",  "text": "Sentimen euforia, Fear & Greed sudah 82."},
+    {"agent": "SOL",   "text": "Rilis CPI Kamis bisa jadi katalis turun."},
+    {"agent": "VEGA",  "text": "Backtest setup ini: winrate 61%, RR 1:2.4."},
+    {"agent": "REX",   "text": "Likuiditas tebal di 70K, eksekusi bisa bertahap."},
+    {"agent": "MIRA",  "text": "Maks risiko 2% per trade. Sepakat?"},
+    {"agent": "ATLAS", "text": "Keputusan: long bertahap, SL di 68.9K."}
+  ]
+}

@@ -1,0 +1,546 @@
+{
+ "fps": 24,
+ "frame_end": 1257,
+ "floor_height": 3.6,
+ "views": [
+  {
+   "name": "CAM_Overview",
+   "target": [
+    4.0,
+    -4.0,
+    2.0
+   ],
+   "ortho": 58.0,
+   "hide": [
+    "Roof"
+   ]
+  },
+  {
+   "name": "CAM_Building",
+   "target": [
+    -1.0,
+    0.3,
+    3.0
+   ],
+   "ortho": 33.0,
+   "hide": [
+    "Roof"
+   ]
+  },
+  {
+   "name": "CAM_Floor1",
+   "target": [
+    -0.5,
+    0.0,
+    1.0
+   ],
+   "ortho": 27.0,
+   "hide": [
+    "Floor_2",
+    "Roof",
+    "Facade_1"
+   ]
+  },
+  {
+   "name": "CAM_TradingFloor",
+   "target": [
+    -4.3,
+    1.4,
+    1.0
+   ],
+   "ortho": 15.5,
+   "hide": [
+    "Floor_2",
+    "Roof",
+    "Facade_1"
+   ]
+  },
+  {
+   "name": "CAM_MeetingRoom",
+   "target": [
+    7.5,
+    2.9,
+    1.2
+   ],
+   "ortho": 9.5,
+   "hide": [
+    "Floor_2",
+    "Roof",
+    "Facade_1"
+   ]
+  },
+  {
+   "name": "CAM_Pantry",
+   "target": [
+    7.5,
+    -3.8,
+    1.0
+   ],
+   "ortho": 8.5,
+   "hide": [
+    "Floor_2",
+    "Roof",
+    "Facade_1"
+   ]
+  },
+  {
+   "name": "CAM_Floor2",
+   "target": [
+    -0.5,
+    0.0,
+    4.6
+   ],
+   "ortho": 27.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_LeadRooms",
+   "target": [
+    -5.25,
+    0.0,
+    4.6
+   ],
+   "ortho": 15.5,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_OwnerRoom",
+   "target": [
+    7.2,
+    2.6,
+    4.6
+   ],
+   "ortho": 11.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_GameRoom",
+   "target": [
+    7.5,
+    -4.0,
+    4.6
+   ],
+   "ortho": 8.5,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_ATLAS",
+   "target": [
+    -9.085,
+    4.665,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_SAGE",
+   "target": [
+    -5.25,
+    4.665,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_CIPHER",
+   "target": [
+    -1.415,
+    4.665,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_VORTEX",
+   "target": [
+    -9.085,
+    0.0,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_CHRONOS",
+   "target": [
+    -5.25,
+    0.0,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_ALPHA",
+   "target": [
+    -1.415,
+    0.0,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_SENTINEL",
+   "target": [
+    -9.085,
+    -4.665,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_KILLJOY",
+   "target": [
+    -5.25,
+    -4.665,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  },
+  {
+   "name": "CAM_Lead_ODIN",
+   "target": [
+    -1.415,
+    -4.665,
+    4.6
+   ],
+   "ortho": 6.0,
+   "hide": [
+    "Roof",
+    "Facade_2"
+   ]
+  }
+ ],
+ "agents": [
+  {
+   "id": "NEXUS",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#22344F"
+  },
+  {
+   "id": "NOVA",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#F4F6F8"
+  },
+  {
+   "id": "VEGA",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#3E8E5E"
+  },
+  {
+   "id": "ORION",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#5B6168"
+  },
+  {
+   "id": "LYRA",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#E07A9B"
+  },
+  {
+   "id": "KAI",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#202226"
+  },
+  {
+   "id": "SOL",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#C8B08A"
+  },
+  {
+   "id": "REX",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#E67E22"
+  },
+  {
+   "id": "MIRA",
+   "role": "Trade Executor",
+   "floor": 1,
+   "color": "#1B8A8A"
+  },
+  {
+   "id": "ATLAS",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#2F3640",
+   "view": "CAM_Lead_ATLAS"
+  },
+  {
+   "id": "SAGE",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#7FA37A",
+   "view": "CAM_Lead_SAGE"
+  },
+  {
+   "id": "CIPHER",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#1A1A1F",
+   "view": "CAM_Lead_CIPHER"
+  },
+  {
+   "id": "VORTEX",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#2549A8",
+   "view": "CAM_Lead_VORTEX"
+  },
+  {
+   "id": "CHRONOS",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#6E1F2E",
+   "view": "CAM_Lead_CHRONOS"
+  },
+  {
+   "id": "ALPHA",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#8FB8DE",
+   "view": "CAM_Lead_ALPHA"
+  },
+  {
+   "id": "SENTINEL",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#22304A",
+   "view": "CAM_Lead_SENTINEL"
+  },
+  {
+   "id": "KILLJOY",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#F2C230",
+   "view": "CAM_Lead_KILLJOY"
+  },
+  {
+   "id": "ODIN",
+   "role": "Lead Agent",
+   "floor": 2,
+   "color": "#3B3F46",
+   "view": "CAM_Lead_ODIN"
+  },
+  {
+   "id": "BOSS",
+   "role": "Founder",
+   "floor": 2,
+   "color": "#FF7F50",
+   "view": "CAM_OwnerRoom"
+  }
+ ],
+ "speech": [
+  {
+   "agent": "NEXUS",
+   "f0": 20,
+   "f1": 66,
+   "text": "Tim eksekusi, kumpul di Meeting Room. Kita debat BTC!",
+   "floor": 1
+  },
+  {
+   "agent": "ATLAS",
+   "f0": 40,
+   "f1": 96,
+   "text": "Makro: risk-on, DXY melemah.",
+   "floor": 2
+  },
+  {
+   "agent": "REX",
+   "f0": 70,
+   "f1": 116,
+   "text": "Siap, order book sudah saya pantau.",
+   "floor": 1
+  },
+  {
+   "agent": "BOSS",
+   "f0": 110,
+   "f1": 166,
+   "text": "Volume naik! Drop the beat!",
+   "floor": 2
+  },
+  {
+   "agent": "CIPHER",
+   "f0": 190,
+   "f1": 246,
+   "text": "Model sinyal v4 sudah live.",
+   "floor": 2
+  },
+  {
+   "agent": "SENTINEL",
+   "f0": 270,
+   "f1": 326,
+   "text": "Risk limit aman, drawdown 1.2%.",
+   "floor": 2
+  },
+  {
+   "agent": "SAGE",
+   "f0": 350,
+   "f1": 406,
+   "text": "On-chain: whale akumulasi ETH.",
+   "floor": 2
+  },
+  {
+   "agent": "VORTEX",
+   "f0": 430,
+   "f1": 486,
+   "text": "Volatilitas SOL naik, siapkan hedge.",
+   "floor": 2
+  },
+  {
+   "agent": "CHRONOS",
+   "f0": 510,
+   "f1": 566,
+   "text": "Siklus 4 tahun masih on track.",
+   "floor": 2
+  },
+  {
+   "agent": "NEXUS",
+   "f0": 573,
+   "f1": 633,
+   "text": "Agenda: posisi BTC minggu ini. Long atau short?",
+   "floor": 1
+  },
+  {
+   "agent": "ALPHA",
+   "f0": 590,
+   "f1": 646,
+   "text": "Alpha baru: spread funding XRP.",
+   "floor": 2
+  },
+  {
+   "agent": "NOVA",
+   "f0": 639,
+   "f1": 699,
+   "text": "Breakout 72K terkonfirmasi, volume naik 38%.",
+   "floor": 1
+  },
+  {
+   "agent": "KILLJOY",
+   "f0": 670,
+   "f1": 726,
+   "text": "Stop loss semua posisi sudah terpasang.",
+   "floor": 2
+  },
+  {
+   "agent": "ORION",
+   "f0": 705,
+   "f1": 765,
+   "text": "Funding rate terlalu panas. Risiko long squeeze!",
+   "floor": 1
+  },
+  {
+   "agent": "ODIN",
+   "f0": 750,
+   "f1": 806,
+   "text": "Portofolio rebalance jam 16:00.",
+   "floor": 2
+  },
+  {
+   "agent": "KAI",
+   "f0": 771,
+   "f1": 831,
+   "text": "4H CHoCH bullish, order block di 69.8K.",
+   "floor": 1
+  },
+  {
+   "agent": "LYRA",
+   "f0": 837,
+   "f1": 897,
+   "text": "Sentimen euforia, Fear & Greed sudah 82.",
+   "floor": 1
+  },
+  {
+   "agent": "BOSS",
+   "f0": 840,
+   "f1": 896,
+   "text": "Nice work team. Gas terus!",
+   "floor": 2
+  },
+  {
+   "agent": "SOL",
+   "f0": 903,
+   "f1": 963,
+   "text": "Rilis CPI Kamis bisa jadi katalis turun.",
+   "floor": 1
+  },
+  {
+   "agent": "VEGA",
+   "f0": 969,
+   "f1": 1029,
+   "text": "Backtest setup ini: winrate 61%, RR 1:2.4.",
+   "floor": 1
+  },
+  {
+   "agent": "REX",
+   "f0": 1035,
+   "f1": 1095,
+   "text": "Likuiditas tebal di 70K, eksekusi bisa bertahap.",
+   "floor": 1
+  },
+  {
+   "agent": "MIRA",
+   "f0": 1101,
+   "f1": 1161,
+   "text": "Maks risiko 2% per trade. Sepakat?",
+   "floor": 1
+  },
+  {
+   "agent": "NEXUS",
+   "f0": 1167,
+   "f1": 1227,
+   "text": "Keputusan: long bertahap, SL di 68.9K.",
+   "floor": 1
+  }
+ ],
+ "debate_start": 573
+}
