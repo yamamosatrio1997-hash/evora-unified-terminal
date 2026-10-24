@@ -1,0 +1,43 @@
+# Menerbitkan viewer 3D QUANTBOT HQ (blender/web) ke GitHub Pages.
+# Sekali saja: Settings > Pages > Build and deployment > Source = "GitHub Actions".
+name: Deploy QUANTBOT HQ viewer
+
+on:
+  push:
+    branches: [main]
+    paths: ["blender/web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Siapkan situs
+        run: |
+          mkdir -p _site
+          {
+            echo '<!doctype html><html lang="id"><head><meta charset="utf-8">'
+            echo '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>'
+            cat blender/web/index.html
+            echo '</body></html>'
+          } > _site/index.html
+          cp blender/web/quantbot_hq_model.json blender/web/quantbot_hq_schedule.json blender/web/draco_decoder.js _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

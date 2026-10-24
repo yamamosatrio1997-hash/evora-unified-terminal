@@ -81,7 +81,11 @@ Rig setiap agen sama: `root`, `body`, `head`, `arm.L/R`, `leg.L/R`. Action siap 
 
 Animasi berjalan real-time di viewport (mode Material Preview atau Solid). Mouse wheel dan zoom viewport biasa juga tetap bisa dipakai.
 
-**Di browser**: buka versi online di https://claude.ai/artifact/Gme1njmeVyDMtdHR9WBfTS (link privat: orang lain bisa membukanya setelah Anda bagikan lewat menu Share), atau jalankan `python3 -m http.server` di folder `web/` lalu buka `index.html`. Isinya:
+**Di browser (publik, tanpa login)**: setelah PR ini di-merge ke `main` dan GitHub Pages diaktifkan sekali
+(Settings > Pages > Source = **GitHub Actions**), viewer otomatis terbit di
+https://yamamosatrio1997-hash.github.io/evora-unified-terminal/ lewat workflow `.github/workflows/pages.yml`.
+
+**Di browser (claude.ai)**: buka versi online di https://claude.ai/artifact/Gme1njmeVyDMtdHR9WBfTS (link privat: orang lain bisa membukanya setelah Anda bagikan lewat menu Share), atau jalankan `python3 -m http.server` di folder `web/` lalu buka `index.html`. Isinya:
 
 - zoom dengan scroll atau pinch, putar dengan drag, geser dengan klik kanan atau dua jari;
 - tombol per ruangan dan per Lead;
