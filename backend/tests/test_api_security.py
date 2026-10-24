@@ -125,6 +125,13 @@ def test_production_requires_secrets():
         Settings(app_env="production", session_secret="short", service_token="short")
 
 
+def test_hosted_postgres_urls_use_psycopg_driver():
+    from app.config import Settings
+
+    for url in ("postgres://u:p@h:5432/d", "postgresql://u:p@h:5432/d", "postgresql+psycopg://u:p@h:5432/d"):
+        assert Settings(database_url=url).database_url == "postgresql+psycopg://u:p@h:5432/d"
+
+
 def test_audit_chain_and_immutability(db):
     audit(db, "t", "a1", details={"api_key": "should-be-redacted", "x": 1})
     audit(db, "t", "a2")

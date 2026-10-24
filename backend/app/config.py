@@ -105,6 +105,15 @@ class Settings(BaseSettings):
     n8n_base_url: str = "http://n8n:5678"
     n8n_api_key: SecretStr = SecretStr("")
 
+    @field_validator("database_url")
+    @classmethod
+    def _psycopg_driver(cls, v: str) -> str:
+        # Hosted Postgres providers (Render, Heroku) hand out postgres:// or postgresql:// URLs.
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+psycopg://" + v[len(prefix):]
+        return v
+
     @field_validator("max_planned_risk_per_trade")
     @classmethod
     def _risk_ceiling(cls, v: Decimal) -> Decimal:
