@@ -1,2 +1,9 @@
 # evora-unified-terminal
-cd evora-unified-terminal  # Initialize git git init git add . git commit -m "Initial commit: Evora Unified Terminal"  # Create repo di https://github.com/new # Nama: evora-unified-terminal  # Push ke GitHub git remote add origin https://github.com/YOUR_USERNAME/evora-unified-terminal.git git branch -M main git push -u origin main
+
+## Proyek
+
+- [`quantbot-office/`](quantbot-office/README.md) — kantor 3D real-time Quantbot (Three.js): desk trader, 8 Lead Departemen, Odin (Fund Manager) dengan report tiap jam ke Yama di lantai 2, pantry, lounge, dan game room.
+
+```bash
+cd quantbot-office && npm install && npm run dev
+```
